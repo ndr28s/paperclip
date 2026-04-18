@@ -40,7 +40,11 @@ COPY . .
 RUN pnpm --filter @paperclipai/ui build
 RUN pnpm --filter @paperclipai/plugin-sdk build
 RUN pnpm --filter @paperclipai/server build
+RUN pnpm --filter paperclipai build
 RUN test -f server/dist/index.js || (echo "ERROR: server build output missing" && exit 1)
+RUN test -f cli/dist/index.js || (echo "ERROR: cli build output missing" && exit 1)
+# Expose CLI at dist/cli/index.js for Railway startCommand compatibility
+RUN mkdir -p dist/cli && cp cli/dist/index.js dist/cli/index.js
 
 FROM base AS production
 ARG USER_UID=1000
@@ -68,7 +72,7 @@ ENV NODE_ENV=production \
   USER_GID=${USER_GID} \
   PAPERCLIP_CONFIG=/paperclip/instances/default/config.json \
   PAPERCLIP_DEPLOYMENT_MODE=authenticated \
-  PAPERCLIP_DEPLOYMENT_EXPOSURE=private \
+  PAPERCLIP_DEPLOYMENT_EXPOSURE=public \
   OPENCODE_ALLOW_ALL_MODELS=true
 
 VOLUME ["/paperclip"]
