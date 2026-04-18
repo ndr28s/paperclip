@@ -171,7 +171,7 @@ function ensureDevWorkspaceBuildDeps(projectRoot: string): void {
   }
 }
 
-export async function importServerEntry(): Promise<StartedServer> {
+async function importServerEntry(): Promise<StartedServer> {
   // Dev mode: try local workspace path (monorepo with tsx)
   const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
   const devEntry = path.resolve(projectRoot, "server/src/index.ts");

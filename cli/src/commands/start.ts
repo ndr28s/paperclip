@@ -6,19 +6,20 @@ import {
   resolvePaperclipHomeDir,
   resolvePaperclipInstanceId,
 } from "../config/home.js";
-import { importServerEntry } from "./run.js";
 
 interface StartOptions {
   config?: string;
   instance?: string;
 }
 
+type ServerModule = { startServer?: () => Promise<unknown> };
+
 /**
  * Production-mode server start. Unlike `run`, this command:
- * - Skips the interactive onboarding wizard
- * - Skips the doctor health-check prompts
- * - Requires a pre-existing config.json (errors out if missing)
- * - Is designed for containerized / CI deployments (Railway, Docker)
+ * - Skips the interactive onboarding wizard and doctor health-check
+ * - Requires a pre-existing config.json (exits 1 if missing)
+ * - Imports @paperclipai/server directly (no dev-mode tsx detection)
+ * - Designed for containerized / Railway deployments
  */
 export async function startCommand(opts: StartOptions): Promise<void> {
   const instanceId = resolvePaperclipInstanceId(opts.instance);
@@ -37,13 +38,25 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   if (!configExists(configPath)) {
     console.error(
       `[paperclipai start] No config found at: ${configPath}\n` +
-        `Run 'paperclipai onboard' or 'paperclipai run' to set up first, ` +
-        `or set PAPERCLIP_CONFIG to an existing config.json path.`,
+        `Run 'paperclipai onboard' first, or set PAPERCLIP_CONFIG to an existing config.json path.`,
     );
     process.exit(1);
   }
 
-  console.log(`[paperclipai start] Starting Paperclip server (instance: ${instanceId})...`);
+  console.log(`[paperclipai start] Starting server (instance: ${instanceId})...`);
 
-  await importServerEntry();
+  let mod: ServerModule;
+  try {
+    mod = await import("@paperclipai/server") as ServerModule;
+  } catch (err) {
+    console.error("[paperclipai start] Failed to import @paperclipai/server:", err);
+    process.exit(1);
+  }
+
+  if (typeof mod.startServer !== "function") {
+    console.error("[paperclipai start] @paperclipai/server did not export startServer()");
+    process.exit(1);
+  }
+
+  await mod.startServer();
 }
