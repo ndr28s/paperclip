@@ -1,0 +1,54 @@
+{
+  "$meta": {
+    "version": 1,
+    "updatedAt": "2026-04-18T00:00:00.000Z",
+    "source": "configure"
+  },
+  "database": {
+    "mode": "postgres",
+    "connectionString": "<SUPABASE_DATABASE_URL>",
+    "backup": {
+      "enabled": false
+    }
+  },
+  "logging": {
+    "mode": "file",
+    "logDir": "/app/.paperclip/logs"
+  },
+  "server": {
+    "deploymentMode": "authenticated",
+    "exposure": "public",
+    "bind": "loopback",
+    "host": "0.0.0.0",
+    "port": 3100,
+    "allowedHostnames": ["paperclip.glit.io"],
+    "serveUi": true
+  },
+  "auth": {
+    "baseUrlMode": "explicit",
+    "publicBaseUrl": "https://paperclip.glit.io",
+    "disableSignUp": false
+  },
+  "storage": {
+    "provider": "s3",
+    "localDisk": {
+      "baseDir": "/app/.paperclip/storage"
+    },
+    "s3": {
+      "bucket": "glit-paperclip",
+      "region": "ap-northeast-2",
+      "endpoint": "<SUPABASE_STORAGE_ENDPOINT>",
+      "prefix": "",
+      "forcePathStyle": true
+    }
+  },
+  "secrets": {
+    "provider": "local_encrypted",
+    "localEncrypted": {
+      "keyFilePath": "/app/.paperclip/secrets/master.key"
+    }
+  },
+  "telemetry": {
+    "enabled": false
+  }
+}

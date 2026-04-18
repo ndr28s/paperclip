@@ -1,0 +1,14 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node dist/cli/index.js start"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+
+# Required env vars (set in Railway → Project → Variables):
+#   DATABASE_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+#   PUBLIC_BASE_URL, NODE_ENV, PAPERCLIP_HOME
