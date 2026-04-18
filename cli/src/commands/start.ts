@@ -38,11 +38,9 @@ export async function startCommand(opts: StartOptions): Promise<void> {
   loadPaperclipEnvFile(configPath);
 
   if (!configExists(configPath)) {
-    console.error(
-      `[paperclipai start] No config found at: ${configPath}\n` +
-        `Run 'paperclipai onboard' first, or set PAPERCLIP_CONFIG to an existing config.json path.`,
+    console.warn(
+      `[paperclipai start] No config.json found at: ${configPath} — relying on environment variables.`,
     );
-    process.exit(1);
   }
 
   // Resolve server/dist/index.js from the CLI dist output directory.
