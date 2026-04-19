@@ -50,6 +50,23 @@ function resolveWithin(basePath: string, relativePath: string) {
   return resolved;
 }
 
+// Trim trailing incomplete UTF-8 multi-byte sequence from a buffer.
+// Korean characters (U+AC00–U+D7A3) encode as 3 bytes; slicing at an
+// arbitrary byte boundary leaves dangling lead/continuation bytes that
+// Node's Buffer.toString('utf8') silently replaces with U+FFFD.
+function trimIncompleteUtf8(buf: Buffer): { complete: Buffer; trimBytes: number } {
+  let i = buf.length - 1;
+  while (i >= 0 && (buf[i]! & 0xc0) === 0x80) i--;
+  if (i < 0) return { complete: buf, trimBytes: 0 };
+  const lead = buf[i]!;
+  const seqLen = lead >= 0xf0 ? 4 : lead >= 0xe0 ? 3 : lead >= 0xc0 ? 2 : 1;
+  const haveBytes = buf.length - i;
+  if (haveBytes < seqLen) {
+    return { complete: buf.subarray(0, i), trimBytes: seqLen - haveBytes };
+  }
+  return { complete: buf, trimBytes: 0 };
+}
+
 function createLocalFileRunLogStore(basePath: string): RunLogStore {
   async function ensureDir(relativeDir: string) {
     const dir = resolveWithin(basePath, relativeDir);
@@ -77,8 +94,11 @@ function createLocalFileRunLogStore(basePath: string): RunLogStore {
       stream.on("end", () => resolve());
     });
 
-    const content = Buffer.concat(chunks).toString("utf8");
-    const nextOffset = end + 1 < stat.size ? end + 1 : undefined;
+    const raw = Buffer.concat(chunks);
+    const { complete, trimBytes } = trimIncompleteUtf8(raw);
+    const content = complete.toString("utf8");
+    const actualEnd = end - trimBytes;
+    const nextOffset = actualEnd + 1 < stat.size ? actualEnd + 1 : undefined;
     return { content, nextOffset };
   }
 
