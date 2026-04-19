@@ -199,6 +199,8 @@ pnpm dev
 This starts the API server at `http://localhost:3100`. An embedded PostgreSQL database is created automatically — no setup required.
 
 > **Requirements:** Node.js 20+, pnpm 9.15+
+>
+> **Windows users:** The build is now cross-platform — `pnpm install && pnpm build` works in PowerShell or cmd without any extra setup. Some auxiliary scripts (release, smoke tests, db backup) are still `.sh` files; if you need to run those, install [Git for Windows](https://git-scm.com/download/win) and add a project-level `.npmrc` containing `script-shell=C:/Program Files/Git/bin/bash.exe` so pnpm uses bash for those scripts.
 
 <br/>
 
