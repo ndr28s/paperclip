@@ -26,6 +26,7 @@ export interface InstanceGeneralSettings {
 export interface InstanceExperimentalSettings {
   enableIsolatedWorkspaces: boolean;
   autoRestartDevServerWhenIdle: boolean;
+  enableAgentMemory: boolean;
 }
 
 export interface InstanceSettings {

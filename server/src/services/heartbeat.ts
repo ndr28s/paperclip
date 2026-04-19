@@ -3277,7 +3277,8 @@ export function heartbeatService(db: Db) {
             issueContext.assigneeAdapterOverrides,
           )
         : null;
-    const isolatedWorkspacesEnabled = (await instanceSettings.getExperimental()).enableIsolatedWorkspaces;
+    const { enableIsolatedWorkspaces: isolatedWorkspacesEnabled, enableAgentMemory } =
+      await instanceSettings.getExperimental();
     const issueExecutionWorkspaceSettings = isolatedWorkspacesEnabled
       ? parseIssueExecutionWorkspaceSettings(issueContext?.executionWorkspaceSettings)
       : null;
@@ -3412,6 +3413,7 @@ export function heartbeatService(db: Db) {
     const runtimeConfig = {
       ...effectiveResolvedConfig,
       paperclipRuntimeSkills: runtimeSkillEntries,
+      ...(agent.adapterType === "hermes_local" && { enableAgentMemory }),
     };
     const workspaceOperationRecorder = workspaceOperationsSvc.createRecorder({
       companyId: agent.companyId,
