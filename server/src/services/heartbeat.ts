@@ -65,6 +65,7 @@ import {
   resolveExecutionWorkspaceMode,
 } from "./execution-workspace-policy.js";
 import { instanceSettingsService } from "./instance-settings.js";
+import { agentMemoryService } from "./agent-memory.js";
 import { redactCurrentUserText, redactCurrentUserValue } from "../log-redaction.js";
 import {
   hasSessionCompactionThresholds,
@@ -4098,6 +4099,29 @@ export function heartbeatService(db: Db) {
               lastError: outcome === "succeeded" ? null : (adapterResult.errorMessage ?? "run_failed"),
             });
           }
+        }
+      }
+      if (finalizedRun && outcome === "succeeded" && agent.adapterType === "hermes_local" && enableAgentMemory) {
+        try {
+          const memorySvc = agentMemoryService(db);
+          const summary = typeof persistedResultJson === "object" && persistedResultJson !== null
+            ? ((persistedResultJson as Record<string, unknown>).summary as string | undefined)
+              ?? ((persistedResultJson as Record<string, unknown>).result as string | undefined)
+            : null;
+          if (summary && summary.trim().length > 0) {
+            const memoryBody = issueId
+              ? `Task ${issueId}: ${summary.trim()}`
+              : summary.trim();
+            await memorySvc.write({
+              agentId: agent.id,
+              companyId: agent.companyId,
+              sessionId: finalizedRun.id,
+              body: memoryBody,
+              embeddingHint: issueId ?? null,
+            });
+          }
+        } catch (memErr) {
+          logger.warn({ err: memErr, runId }, "failed to write agent memory after run completion");
         }
       }
       await finalizeAgentStatus(agent.id, outcome);
