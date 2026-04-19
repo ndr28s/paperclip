@@ -322,7 +322,7 @@ export async function createApp(
         }
         res
           .status(200)
-          .set("Content-Type", "text/html")
+          .set("Content-Type", "text/html; charset=utf-8")
           .set("Cache-Control", "no-cache")
           .end(indexHtml);
       });

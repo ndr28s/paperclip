@@ -144,7 +144,7 @@ export async function startPluginDevServer(options: PluginDevServerOptions = {})
 
     if (url === "/__paperclip__/events") {
       res.writeHead(200, {
-        "Content-Type": "text/event-stream",
+        "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
       });
