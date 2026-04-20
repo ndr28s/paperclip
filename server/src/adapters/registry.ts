@@ -1,4 +1,4 @@
-import type { ServerAdapterModule } from "./types.js";
+import type { ServerAdapterModule, AdapterConfigSchema } from "./types.js";
 import { getAdapterSessionManagement } from "@paperclipai/adapter-utils";
 import {
   execute as claudeExecute,
@@ -200,6 +200,11 @@ const piLocalAdapter: ServerAdapterModule = {
   agentConfigurationDoc: piAgentConfigurationDoc,
 };
 
+const HERMES_VALID_PROVIDERS = [
+  "auto", "openrouter", "nous", "openai-codex", "copilot", "copilot-acp",
+  "anthropic", "huggingface", "zai", "kimi-coding", "minimax", "minimax-cn", "kilocode",
+] as const;
+
 const hermesLocalAdapter: ServerAdapterModule = {
   type: "hermes_local",
   execute: hermesExecute,
@@ -208,12 +213,91 @@ const hermesLocalAdapter: ServerAdapterModule = {
   listSkills: hermesListSkills,
   syncSkills: hermesSyncSkills,
   models: hermesModels,
+  sessionManagement: getAdapterSessionManagement("hermes_local") ?? undefined,
   supportsLocalAgentJwt: true,
   supportsInstructionsBundle: true,
   instructionsPathKey: "instructionsFilePath",
   requiresMaterializedRuntimeSkills: false,
   agentConfigurationDoc: hermesAgentConfigurationDoc,
   detectModel: () => detectModelFromHermes(),
+  getConfigSchema() {
+    return {
+      fields: [
+        {
+          key: "model",
+          label: "Model",
+          type: "text",
+          default: "anthropic/claude-sonnet-4",
+          hint: "Model in provider/name format (e.g. anthropic/claude-sonnet-4). Leave blank to use Hermes's configured default.",
+          group: "Core",
+        },
+        {
+          key: "provider",
+          label: "Provider",
+          type: "select",
+          options: HERMES_VALID_PROVIDERS.map((p) => ({ value: p, label: p })),
+          default: "auto",
+          hint: "Inference provider. 'auto' lets Hermes detect from model name.",
+          group: "Core",
+        },
+        {
+          key: "timeoutSec",
+          label: "Timeout (sec)",
+          type: "number",
+          default: 1800,
+          hint: "Wall-clock kill timeout for the hermes process.",
+          group: "Core",
+        },
+        {
+          key: "toolsets",
+          label: "Toolsets",
+          type: "text",
+          hint: "Comma-separated toolsets to enable (e.g. terminal,file,web). Leave blank for all.",
+          group: "Tools",
+        },
+        {
+          key: "persistSession",
+          label: "Persist session",
+          type: "toggle",
+          default: true,
+          hint: "Resume the same Hermes session across heartbeats.",
+          group: "Session",
+        },
+        {
+          key: "worktreeMode",
+          label: "Worktree mode",
+          type: "toggle",
+          default: false,
+          hint: "Use an isolated git worktree for each run.",
+          group: "Session",
+        },
+        {
+          key: "checkpoints",
+          label: "Checkpoints",
+          type: "toggle",
+          default: false,
+          hint: "Enable filesystem checkpoints (--checkpoints).",
+          group: "Session",
+        },
+        {
+          key: "hermesCommand",
+          label: "Hermes binary",
+          type: "text",
+          default: "hermes",
+          hint: "Path to the hermes CLI binary if not on PATH.",
+          group: "Advanced",
+        },
+        {
+          key: "verbose",
+          label: "Verbose",
+          type: "toggle",
+          default: false,
+          hint: "Pass --verbose to the hermes CLI.",
+          group: "Advanced",
+        },
+      ],
+    };
+  },
 };
 
 const adaptersByType = new Map<string, ServerAdapterModule>();
