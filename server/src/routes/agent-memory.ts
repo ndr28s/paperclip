@@ -88,11 +88,30 @@ export function agentMemoryRoutes(db: Db) {
       await assertMemoryEnabled();
 
       const rawLimit = req.query["limit"];
-      const limit = rawLimit !== undefined ? Math.min(Number(rawLimit), 50) : 10;
+      const limit = rawLimit !== undefined ? Math.min(Number(rawLimit), 50) : 20;
       if (Number.isNaN(limit) || limit < 1) throw unprocessable("Invalid limit");
 
       const results = await memorySvc.listRecent({ agentId, companyId, limit });
       res.json({ results });
+    },
+  );
+
+  // DELETE /api/companies/:companyId/agents/:agentId/memory/:memoryId
+  router.delete(
+    "/companies/:companyId/agents/:agentId/memory/:memoryId",
+    async (req, res) => {
+      const companyId = req.params["companyId"] as string;
+      const agentId = req.params["agentId"] as string;
+      const memoryId = req.params["memoryId"] as string;
+      assertCompanyAccess(req, companyId);
+      await assertMemoryEnabled();
+
+      const deleted = await memorySvc.remove({ id: memoryId, agentId, companyId });
+      if (!deleted) {
+        res.status(404).json({ error: "Memory entry not found" });
+        return;
+      }
+      res.status(204).end();
     },
   );
 

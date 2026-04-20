@@ -119,5 +119,19 @@ export function agentMemoryService(db: Db) {
         .limit(limit);
       return rows.map(toEntry);
     },
+
+    remove: async (params: { id: string; agentId: string; companyId: string }): Promise<boolean> => {
+      const result = await db
+        .delete(agentMemory)
+        .where(
+          and(
+            eq(agentMemory.id, params.id),
+            eq(agentMemory.agentId, params.agentId),
+            eq(agentMemory.companyId, params.companyId),
+          ),
+        )
+        .returning({ id: agentMemory.id });
+      return result.length > 0;
+    },
   };
 }

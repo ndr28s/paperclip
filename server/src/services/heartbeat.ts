@@ -77,6 +77,7 @@ import {
   writePaperclipSkillSyncPreference,
 } from "@paperclipai/adapter-utils/server-utils";
 import { extractSkillMentionIds } from "@paperclipai/shared";
+import { extractSkillProposalsFromText } from "./skill-proposal-parser.js";
 
 const MAX_LIVE_LOG_CHUNK_BYTES = 8 * 1024;
 const MAX_PERSISTED_LOG_CHUNK_CHARS = 64 * 1024;
@@ -3278,7 +3279,7 @@ export function heartbeatService(db: Db) {
             issueContext.assigneeAdapterOverrides,
           )
         : null;
-    const { enableIsolatedWorkspaces: isolatedWorkspacesEnabled, enableAgentMemory } =
+    const { enableIsolatedWorkspaces: isolatedWorkspacesEnabled, enableAgentMemory, enableAutoSkillCreation } =
       await instanceSettings.getExperimental();
     const issueExecutionWorkspaceSettings = isolatedWorkspacesEnabled
       ? parseIssueExecutionWorkspaceSettings(issueContext?.executionWorkspaceSettings)
@@ -4122,6 +4123,25 @@ export function heartbeatService(db: Db) {
           }
         } catch (memErr) {
           logger.warn({ err: memErr, runId }, "failed to write agent memory after run completion");
+        }
+      }
+      if (finalizedRun && outcome === "succeeded" && agent.adapterType === "hermes_local" && enableAutoSkillCreation) {
+        try {
+          const resultText = typeof persistedResultJson === "object" && persistedResultJson !== null
+            ? ((persistedResultJson as Record<string, unknown>).result as string | undefined) ?? null
+            : null;
+          if (resultText) {
+            const proposals = extractSkillProposalsFromText(resultText);
+            if (proposals.length > 0) {
+              const skillSvc = companySkillService(db);
+              for (const proposal of proposals) {
+                await skillSvc.createLocalSkill(agent.companyId, proposal);
+              }
+              logger.info({ runId, count: proposals.length }, "auto-created skills from agent output");
+            }
+          }
+        } catch (skillErr) {
+          logger.warn({ err: skillErr, runId }, "failed to auto-create skills after run completion");
         }
       }
       await finalizeAgentStatus(agent.id, outcome);

@@ -24,7 +24,7 @@ export function InstanceExperimentalSettings() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async (patch: { enableIsolatedWorkspaces?: boolean; autoRestartDevServerWhenIdle?: boolean; enableAgentMemory?: boolean }) =>
+    mutationFn: async (patch: { enableIsolatedWorkspaces?: boolean; autoRestartDevServerWhenIdle?: boolean; enableAgentMemory?: boolean; enableAutoSkillCreation?: boolean }) =>
       instanceSettingsApi.updateExperimental(patch),
     onSuccess: async () => {
       setActionError(null);
@@ -55,6 +55,7 @@ export function InstanceExperimentalSettings() {
   const enableIsolatedWorkspaces = experimentalQuery.data?.enableIsolatedWorkspaces === true;
   const autoRestartDevServerWhenIdle = experimentalQuery.data?.autoRestartDevServerWhenIdle === true;
   const enableAgentMemory = experimentalQuery.data?.enableAgentMemory === true;
+  const enableAutoSkillCreation = experimentalQuery.data?.enableAutoSkillCreation === true;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -123,6 +124,24 @@ export function InstanceExperimentalSettings() {
             onCheckedChange={() => toggleMutation.mutate({ enableAgentMemory: !enableAgentMemory })}
             disabled={toggleMutation.isPending}
             aria-label="Toggle Hermes agent memory"
+          />
+        </div>
+      </section>
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1.5">
+            <h2 className="text-sm font-semibold">Auto Skill Creation (Hermes)</h2>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              When a Hermes agent run succeeds, automatically save any skills it proposes (via{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">{"<skill_proposal>"}</code> blocks) as
+              company skills so they can be reused by other agents.
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={enableAutoSkillCreation}
+            onCheckedChange={() => toggleMutation.mutate({ enableAutoSkillCreation: !enableAutoSkillCreation })}
+            disabled={toggleMutation.isPending}
+            aria-label="Toggle Hermes auto skill creation"
           />
         </div>
       </section>
