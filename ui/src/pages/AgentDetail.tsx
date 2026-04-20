@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useNavigate, Link, Navigate, useBeforeUnload } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -623,6 +624,7 @@ export function AgentDetail() {
     tab?: string;
     runId?: string;
   }>();
+  const { t } = useTranslation();
   const { companies, selectedCompanyId, setSelectedCompanyId } = useCompany();
   const { closePanel } = usePanel();
   const { openNewIssue } = useDialog();
@@ -940,12 +942,12 @@ export function AgentDetail() {
             onClick={() => openNewIssue({ assigneeAgentId: agent.id })}
           >
             <Plus className="h-3.5 w-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">Assign Task</span>
+            <span className="hidden sm:inline">{t('agentDetail.assignTask')}</span>
           </Button>
           <RunButton
             onClick={() => agentAction.mutate("invoke")}
             disabled={agentAction.isPending || isPendingApproval}
-            label="Run Heartbeat"
+            label={t('agentDetail.runHeartbeat')}
           />
           <PauseResumeButton
             isPaused={agent.status === "paused"}
@@ -1170,6 +1172,7 @@ export function AgentDetail() {
 /* ---- AgentMemoryTab ---- */
 
 function AgentMemoryTab({ agentId, companyId }: { agentId: string; companyId: string }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1207,7 +1210,7 @@ function AgentMemoryTab({ agentId, companyId }: { agentId: string; companyId: st
     <div className="max-w-3xl space-y-4">
       <div className="flex items-center gap-2">
         <Input
-          placeholder="Search memory…"
+          placeholder={t('agentDetail.searchMemory')}
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-xs"
@@ -1382,6 +1385,7 @@ function AgentOverview({
   agentId: string;
   agentRouteId: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-8">
       {/* Latest Run */}
@@ -1389,16 +1393,16 @@ function AgentOverview({
 
       {/* Charts */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <ChartCard title="Run Activity" subtitle="Last 14 days">
+        <ChartCard title={t('agentDetail.charts.runActivity')} subtitle={t('agentDetail.last14Days')}>
           <RunActivityChart runs={runs} />
         </ChartCard>
-        <ChartCard title="Issues by Priority" subtitle="Last 14 days">
+        <ChartCard title={t('agentDetail.charts.issuesByPriority')} subtitle={t('agentDetail.last14Days')}>
           <PriorityChart issues={assignedIssues} />
         </ChartCard>
-        <ChartCard title="Issues by Status" subtitle="Last 14 days">
+        <ChartCard title={t('agentDetail.charts.issuesByStatus')} subtitle={t('agentDetail.last14Days')}>
           <IssueStatusChart issues={assignedIssues} />
         </ChartCard>
-        <ChartCard title="Success Rate" subtitle="Last 14 days">
+        <ChartCard title={t('agentDetail.charts.successRate')} subtitle={t('agentDetail.last14Days')}>
           <SuccessRateChart runs={runs} />
         </ChartCard>
       </div>
@@ -1406,7 +1410,7 @@ function AgentOverview({
       {/* Recent Issues */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Recent Issues</h3>
+          <h3 className="text-sm font-medium">{t('agentDetail.recentIssues')}</h3>
           <Link
             to={`/issues?participantAgentId=${agentId}`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
