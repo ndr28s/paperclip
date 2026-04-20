@@ -5,13 +5,13 @@
 <p align="center">
   <a href="#quickstart"><strong>Quickstart</strong></a> &middot;
   <a href="https://paperclip.ing/docs"><strong>Docs</strong></a> &middot;
-  <a href="https://github.com/paperclipai/paperclip"><strong>GitHub</strong></a> &middot;
+  <a href="https://github.com/ndr28s/paperclip"><strong>GitHub</strong></a> &middot;
   <a href="https://discord.gg/m4HZY7xNG3"><strong>Discord</strong></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/paperclipai/paperclip/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License" /></a>
-  <a href="https://github.com/paperclipai/paperclip/stargazers"><img src="https://img.shields.io/github/stars/paperclipai/paperclip?style=flat" alt="Stars" /></a>
+  <a href="https://github.com/ndr28s/paperclip/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License" /></a>
+  <a href="https://github.com/ndr28s/paperclip/stargazers"><img src="https://img.shields.io/github/stars/ndr28s/paperclip?style=flat" alt="Stars" /></a>
   <a href="https://discord.gg/m4HZY7xNG3"><img src="https://img.shields.io/discord/000000000?label=discord" alt="Discord" /></a>
 </p>
 
@@ -25,7 +25,7 @@
 
 ## What is Paperclip?
 
-# Open-source orchestration for zero-human companies
+### Open-source orchestration for zero-human companies
 
 **If OpenClaw is an _employee_, Paperclip is the _company_**
 
@@ -190,7 +190,7 @@ If you already have Paperclip configured, rerunning `onboard` keeps the existing
 Or manually:
 
 ```bash
-git clone https://github.com/paperclipai/paperclip.git
+git clone https://github.com/ndr28s/paperclip.git
 cd paperclip
 pnpm install
 pnpm dev
@@ -201,6 +201,45 @@ This starts the API server at `http://localhost:3100`. An embedded PostgreSQL da
 > **Requirements:** Node.js 20+, pnpm 9.15+
 >
 > **Windows users:** The build is now cross-platform — `pnpm install && pnpm build` works in PowerShell or cmd without any extra setup. Some auxiliary scripts (release, smoke tests, db backup) are still `.sh` files; if you need to run those, install [Git for Windows](https://git-scm.com/download/win) and add a project-level `.npmrc` containing `script-shell=C:/Program Files/Git/bin/bash.exe` so pnpm uses bash for those scripts.
+
+<br/>
+
+## Deployment
+
+### Local (default)
+
+`pnpm dev` or `npx paperclipai onboard` spins up a single Node.js process with embedded PostgreSQL. No external dependencies required.
+
+### Production
+
+1. Provision a PostgreSQL 14+ database.
+2. Set the `DATABASE_URL` environment variable.
+3. Run `pnpm build && pnpm start`.
+
+```bash
+export DATABASE_URL=postgres://user:pass@host:5432/paperclip
+pnpm build
+pnpm start
+```
+
+### Remote access with Tailscale
+
+For mobile management from anywhere without a public server:
+
+```bash
+npx paperclipai onboard --yes --bind tailnet
+```
+
+This binds the server to your Tailscale IP so you can reach it from any device on your tailnet.
+
+### Docker
+
+```bash
+docker build -t paperclip .
+docker run -p 3100:3100 -e DATABASE_URL=postgres://... paperclip
+```
+
+> See [doc/DEVELOPING.md](doc/DEVELOPING.md) for advanced deployment options including reverse-proxy and TLS setup.
 
 <br/>
 
@@ -302,8 +341,8 @@ We welcome contributions. See the [contributing guide](CONTRIBUTING.md) for deta
 ## Community
 
 - [Discord](https://discord.gg/m4HZY7xNG3) — Join the community
-- [GitHub Issues](https://github.com/paperclipai/paperclip/issues) — bugs and feature requests
-- [GitHub Discussions](https://github.com/paperclipai/paperclip/discussions) — ideas and RFC
+- [GitHub Issues](https://github.com/ndr28s/paperclip/issues) — bugs and feature requests
+- [GitHub Discussions](https://github.com/ndr28s/paperclip/discussions) — ideas and RFC
 
 <br/>
 
@@ -313,7 +352,7 @@ MIT &copy; 2026 Paperclip
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/image?repos=paperclipai/paperclip&type=date&legend=top-left)](https://www.star-history.com/?repos=paperclipai%2Fpaperclip&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/image?repos=ndr28s/paperclip&type=date&legend=top-left)](https://www.star-history.com/?repos=ndr28s%2Fpaperclip&type=date&legend=top-left)
 
 <br/>
 
