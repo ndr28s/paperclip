@@ -253,7 +253,7 @@
   },
   "agentDetail": {
     "runHeartbeat": "Run Heartbeat",
-    "searchMemory": "Search memory\u2026",
+    "searchMemory": "Search memory…",
     "assignTask": "Assign Task",
     "charts": {
       "runActivity": "Run Activity",
@@ -271,7 +271,7 @@
     "addDescription": "Add description...",
     "parentGoal": "Parent goal",
     "noParent": "No parent",
-    "creating": "Creating\u2026",
+    "creating": "Creating…",
     "createGoal": "Create goal",
     "createSubGoal": "Create sub-goal"
   },
@@ -294,7 +294,7 @@
     "localFolder": "Local folder",
     "optional": "optional",
     "failedToCreate": "Failed to create project.",
-    "creating": "Creating\u2026",
+    "creating": "Creating…",
     "createProject": "Create project"
   },
   "issueDetail": {
@@ -466,7 +466,7 @@
     "rename": "Rename",
     "deleteCompany": "Delete Company",
     "deleteConfirm": "Delete this company and all its data? This cannot be undone.",
-    "deleting": "Deleting\u2026",
+    "deleting": "Deleting…",
     "unlimitedBudget": "Unlimited budget",
     "created": "Created"
   },
@@ -653,7 +653,8 @@
     "interrupt": "Interrupt",
     "interrupting": "Interrupting...",
     "sending": "Sending...",
-    "queueing": "Queueing..."
+    "queueing": "Queueing...",
+    "updatedTask": "updated this task"
   },
   "approvalCard": {
     "requestedBy": "Requested by",

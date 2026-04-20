@@ -253,7 +253,7 @@
   },
   "agentDetail": {
     "runHeartbeat": "하트비트 실행",
-    "searchMemory": "메모리 검색\u2026",
+    "searchMemory": "메모리 검색…",
     "assignTask": "작업 할당",
     "charts": {
       "runActivity": "실행 활동",
@@ -271,7 +271,7 @@
     "addDescription": "설명 추가...",
     "parentGoal": "상위 목표",
     "noParent": "상위 목표 없음",
-    "creating": "생성 중\u2026",
+    "creating": "생성 중…",
     "createGoal": "목표 만들기",
     "createSubGoal": "하위 목표 만들기"
   },
@@ -294,7 +294,7 @@
     "localFolder": "로컬 폴더",
     "optional": "선택 사항",
     "failedToCreate": "프로젝트 생성 실패.",
-    "creating": "생성 중\u2026",
+    "creating": "생성 중…",
     "createProject": "프로젝트 만들기"
   },
   "issueDetail": {
@@ -466,7 +466,7 @@
     "rename": "이름 변경",
     "deleteCompany": "회사 삭제",
     "deleteConfirm": "이 회사와 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
-    "deleting": "삭제 중\u2026",
+    "deleting": "삭제 중…",
     "unlimitedBudget": "무제한 예산",
     "created": "생성됨"
   },
@@ -653,7 +653,8 @@
     "interrupt": "중단",
     "interrupting": "중단 중...",
     "sending": "전송 중...",
-    "queueing": "대기열 추가 중..."
+    "queueing": "대기열 추가 중...",
+    "updatedTask": "이 작업을 업데이트했습니다"
   },
   "approvalCard": {
     "requestedBy": "요청자",

@@ -90,6 +90,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, ArrowRight, Brain, Check, ChevronDown, Copy, Hammer, Loader2, MoreHorizontal, Paperclip, Search, Square, ThumbsDown, ThumbsUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface IssueChatMessageContext {
   feedbackVoteByTargetId: Map<string, FeedbackVoteValue>;
@@ -1532,6 +1533,7 @@ function IssueChatFeedbackButtons({
 }
 
 function IssueChatSystemMessage() {
+  const { t } = useTranslation();
   const { agentMap, currentUserId, userLabelMap } = useContext(IssueChatCtx);
   const message = useMessage();
   const custom = message.metadata.custom as Record<string, unknown>;
@@ -1562,7 +1564,7 @@ function IssueChatSystemMessage() {
       <div className="min-w-0 space-y-1">
         <div className={cn("flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-xs", isCurrentUser && "justify-end")}>
           <span className="font-medium text-foreground">{actorName}</span>
-          <span className="text-muted-foreground">updated this task</span>
+          <span className="text-muted-foreground">{t("commentThread.updatedTask")}</span>
           <a
             href={anchorId ? `#${anchorId}` : undefined}
             className="text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
@@ -1574,7 +1576,7 @@ function IssueChatSystemMessage() {
         {statusChange ? (
           <div className={cn("flex flex-wrap items-center gap-1.5 text-xs", isCurrentUser && "justify-end")}>
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Status
+              {t("issueProperties.status")}
             </span>
             <span className="text-muted-foreground">{humanizeValue(statusChange.from)}</span>
             <ArrowRight className="h-3 w-3 text-muted-foreground" />
@@ -1585,7 +1587,7 @@ function IssueChatSystemMessage() {
         {assigneeChange ? (
           <div className={cn("flex flex-wrap items-center gap-1.5 text-xs", isCurrentUser && "justify-end")}>
             <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Assignee
+              {t("issueProperties.assignee")}
             </span>
             <span className="text-muted-foreground">
               {formatTimelineAssigneeLabel(assigneeChange.from, agentMap, currentUserId, userLabelMap)}

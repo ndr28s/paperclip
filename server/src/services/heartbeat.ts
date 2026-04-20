@@ -3104,9 +3104,9 @@ export function heartbeatService(db: Db) {
             previousStatus: "todo",
             latestRun,
             comment:
-              "Paperclip automatically retried dispatch for this assigned `todo` issue after a lost wake/run, " +
-              `but it still has no live execution path.${failureSummary ?? ""} ` +
-              "Moving it to `blocked` so it is visible for intervention.",
+              "Paperclip가 이 `todo` 이슈의 실행 경로가 사라진 후 자동으로 재시도했지만, " +
+              `여전히 실행 경로가 없습니다.${failureSummary ?? ""} ` +
+              "개입이 필요하도록 `blocked` 상태로 변경합니다.",
           });
           if (updated) {
             result.escalated += 1;
@@ -3141,9 +3141,9 @@ export function heartbeatService(db: Db) {
           previousStatus: "in_progress",
           latestRun,
           comment:
-            "Paperclip automatically retried continuation for this assigned `in_progress` issue after its live " +
-            `execution disappeared, but it still has no live execution path.${failureSummary ?? ""} ` +
-            "Moving it to `blocked` so it is visible for intervention.",
+            "Paperclip가 이 `in_progress` 이슈의 실행이 사라진 후 자동으로 재시도했지만, " +
+            `여전히 실행 경로가 없습니다.${failureSummary ?? ""} ` +
+            "개입이 필요하도록 `blocked` 상태로 변경합니다.",
         });
         if (updated) {
           result.escalated += 1;
