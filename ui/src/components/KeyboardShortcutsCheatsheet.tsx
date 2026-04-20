@@ -1,44 +1,45 @@
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ShortcutEntry {
   keys: string[];
-  label: string;
+  labelKey: string;
 }
 
 interface ShortcutSection {
-  title: string;
+  titleKey: string;
   shortcuts: ShortcutEntry[];
 }
 
 const sections: ShortcutSection[] = [
   {
-    title: "Inbox",
+    titleKey: "keyboardShortcuts.inbox",
     shortcuts: [
-      { keys: ["j"], label: "Move down" },
-      { keys: ["k"], label: "Move up" },
-      { keys: ["Enter"], label: "Open selected item" },
-      { keys: ["a"], label: "Archive item" },
-      { keys: ["y"], label: "Archive item" },
-      { keys: ["r"], label: "Mark as read" },
-      { keys: ["U"], label: "Mark as unread" },
+      { keys: ["j"], labelKey: "keyboardShortcuts.moveDown" },
+      { keys: ["k"], labelKey: "keyboardShortcuts.moveUp" },
+      { keys: ["Enter"], labelKey: "keyboardShortcuts.openSelected" },
+      { keys: ["a"], labelKey: "keyboardShortcuts.archiveItem" },
+      { keys: ["y"], labelKey: "keyboardShortcuts.archiveItem" },
+      { keys: ["r"], labelKey: "keyboardShortcuts.markAsRead" },
+      { keys: ["U"], labelKey: "keyboardShortcuts.markAsUnread" },
     ],
   },
   {
-    title: "Issue detail",
+    titleKey: "keyboardShortcuts.issueDetail",
     shortcuts: [
-      { keys: ["y"], label: "Quick-archive back to inbox" },
-      { keys: ["g", "i"], label: "Go to inbox" },
-      { keys: ["g", "c"], label: "Focus comment composer" },
+      { keys: ["y"], labelKey: "keyboardShortcuts.quickArchive" },
+      { keys: ["g", "i"], labelKey: "keyboardShortcuts.goToInbox" },
+      { keys: ["g", "c"], labelKey: "keyboardShortcuts.focusComposer" },
     ],
   },
   {
-    title: "Global",
+    titleKey: "keyboardShortcuts.global",
     shortcuts: [
-      { keys: ["/"], label: "Search current page or quick search" },
-      { keys: ["c"], label: "New issue" },
-      { keys: ["["], label: "Toggle sidebar" },
-      { keys: ["]"], label: "Toggle panel" },
-      { keys: ["?"], label: "Show keyboard shortcuts" },
+      { keys: ["/"], labelKey: "keyboardShortcuts.search" },
+      { keys: ["c"], labelKey: "keyboardShortcuts.newIssue" },
+      { keys: ["["], labelKey: "keyboardShortcuts.toggleSidebar" },
+      { keys: ["]"], labelKey: "keyboardShortcuts.togglePanel" },
+      { keys: ["?"], labelKey: "keyboardShortcuts.showShortcuts" },
     ],
   },
 ];
@@ -58,25 +59,26 @@ export function KeyboardShortcutsCheatsheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden" showCloseButton={false}>
         <DialogHeader className="px-5 pt-5 pb-3">
-          <DialogTitle className="text-base">Keyboard shortcuts</DialogTitle>
+          <DialogTitle className="text-base">{t("keyboardShortcuts.title")}</DialogTitle>
         </DialogHeader>
         <div className="divide-y divide-border border-t border-border">
           {sections.map((section) => (
-            <div key={section.title} className="px-5 py-3">
+            <div key={section.titleKey} className="px-5 py-3">
               <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {section.title}
+                {t(section.titleKey)}
               </h3>
               <div className="space-y-1.5">
                 {section.shortcuts.map((shortcut) => (
                   <div
-                    key={shortcut.label + shortcut.keys.join()}
+                    key={shortcut.labelKey + shortcut.keys.join()}
                     className="flex items-center justify-between gap-4"
                   >
-                    <span className="text-sm text-foreground/90">{shortcut.label}</span>
+                    <span className="text-sm text-foreground/90">{t(shortcut.labelKey)}</span>
                     <div className="flex items-center gap-1">
                       {shortcut.keys.map((key, i) => (
                         <span key={key} className="flex items-center gap-1">
@@ -93,7 +95,7 @@ export function KeyboardShortcutsCheatsheet({
         </div>
         <div className="border-t border-border px-5 py-3">
           <p className="text-xs text-muted-foreground">
-            Press <KeyCap>Esc</KeyCap> to close &middot; Shortcuts are disabled in text fields
+            {t("keyboardShortcuts.closeHint")}
           </p>
         </div>
       </DialogContent>
