@@ -83,10 +83,6 @@ vi.mock("./MobileBottomNav", () => ({
   MobileBottomNav: () => null,
 }));
 
-vi.mock("./WorktreeBanner", () => ({
-  WorktreeBanner: () => null,
-}));
-
 vi.mock("./DevRestartBanner", () => ({
   DevRestartBanner: () => null,
 }));
