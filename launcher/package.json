@@ -1,0 +1,44 @@
+{
+  "name": "paperclip-launcher",
+  "version": "1.0.0",
+  "description": "Paperclip Windows Tray Launcher",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "dependencies": {
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "ai.paperclip.launcher",
+    "productName": "Paperclip",
+    "win": {
+      "target": "nsis",
+      "icon": "src/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "extraResources": [
+      {
+        "from": "../",
+        "to": "app",
+        "filter": [
+          "server/dist/**",
+          "cli/dist/**",
+          "packages/**/dist/**",
+          "node_modules/**",
+          ".paperclip/**"
+        ]
+      }
+    ]
+  }
+}
