@@ -716,6 +716,7 @@ const IssueDetailChatTab = memo(function IssueDetailChatTab({
             }
           : undefined}
         onImageClick={onImageClick}
+        assigneeValue={currentAssigneeValue}
       />
     </div>
   );

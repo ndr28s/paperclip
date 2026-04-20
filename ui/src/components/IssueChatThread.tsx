@@ -89,7 +89,7 @@ import { cn, formatDateTime, formatShortDate } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, ArrowRight, Brain, Check, ChevronDown, Copy, Hammer, Loader2, MoreHorizontal, Paperclip, Search, Square, ThumbsDown, ThumbsUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, Brain, Check, ChevronDown, ChevronsDown, Copy, Hammer, Loader2, MoreHorizontal, Paperclip, Search, Square, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface IssueChatMessageContext {
@@ -112,6 +112,7 @@ interface IssueChatMessageContext {
   onCancelQueued?: (commentId: string) => void;
   interruptingQueuedRunId?: string | null;
   onImageClick?: (src: string) => void;
+  assigneeValue?: string | null;
 }
 
 const IssueChatCtx = createContext<IssueChatMessageContext>({
@@ -119,6 +120,7 @@ const IssueChatCtx = createContext<IssueChatMessageContext>({
   feedbackDataSharingPreference: "prompt",
   feedbackTermsUrl: null,
   activeRunIds: new Set<string>(),
+  assigneeValue: null,
 });
 
 export function resolveAssistantMessageFoldedState(args: {
@@ -254,6 +256,7 @@ interface IssueChatThreadProps {
   stoppingRunId?: string | null;
   onImageClick?: (src: string) => void;
   composerRef?: Ref<IssueChatComposerHandle>;
+  assigneeValue?: string | null;
 }
 
 type IssueChatErrorBoundaryProps = {
@@ -939,6 +942,7 @@ function IssueChatUserMessage() {
     interruptingQueuedRunId,
     currentUserId,
     userProfileMap,
+    assigneeValue,
   } = useContext(IssueChatCtx);
   const message = useMessage();
   const custom = message.metadata.custom as Record<string, unknown>;
@@ -960,6 +964,11 @@ function IssueChatUserMessage() {
     currentUserId,
     userProfileMap,
   });
+  const isAssignee = Boolean(
+    assigneeValue &&
+    authorUserId &&
+    assigneeValue === `user:${authorUserId}`
+  );
   const authorAvatar = (
     <Avatar size="sm" className="mt-1 shrink-0">
       {avatarUrl ? <AvatarImage src={avatarUrl} alt={resolvedAuthorName} /> : null}
@@ -970,13 +979,20 @@ function IssueChatUserMessage() {
     <div className={cn("flex min-w-0 max-w-[85%] flex-col", isCurrentUser && "items-end")}>
       <div className={cn("mb-1 flex items-center gap-2 px-1", isCurrentUser ? "justify-end" : "justify-start")}>
         <span className="text-sm font-medium text-foreground">{resolvedAuthorName}</span>
+        {isAssignee && !isCurrentUser ? (
+          <span className="inline-flex items-center rounded-full border border-emerald-400/60 bg-emerald-100/70 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-200">
+            Assignee
+          </span>
+        ) : null}
       </div>
       <div
         className={cn(
           "min-w-0 max-w-full overflow-hidden break-all rounded-2xl px-4 py-2.5",
           queued
             ? "bg-amber-50/80 dark:bg-amber-500/10"
-            : "bg-muted",
+            : isAssignee && !isCurrentUser
+              ? "bg-emerald-50/80 dark:bg-emerald-500/10"
+              : "bg-muted",
           pending && "opacity-80",
         )}
       >
@@ -1955,9 +1971,11 @@ export function IssueChatThread({
   stoppingRunId = null,
   onImageClick,
   composerRef,
+  assigneeValue,
 }: IssueChatThreadProps) {
   const location = useLocation();
   const hasScrolledRef = useRef(false);
+  const hasAutoScrolledRef = useRef(false);
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
   const composerViewportAnchorRef = useRef<HTMLDivElement | null>(null);
   const composerViewportSnapshotRef = useRef<ReturnType<typeof captureComposerViewportSnapshot>>(null);
@@ -2082,6 +2100,18 @@ export function IssueChatThread({
   }, [messages]);
 
   useEffect(() => {
+    if (hasAutoScrolledRef.current) return;
+    if (messages.length === 0) return;
+    const hash = location.hash;
+    if (hash.startsWith("#comment-") || hash.startsWith("#activity-") || hash.startsWith("#run-")) return;
+    hasAutoScrolledRef.current = true;
+    const timer = setTimeout(() => {
+      bottomAnchorRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [messages.length, location.hash]);
+
+  useEffect(() => {
     const hash = location.hash;
     if (!(hash.startsWith("#comment-") || hash.startsWith("#activity-") || hash.startsWith("#run-"))) return;
     if (messages.length === 0 || hasScrolledRef.current) return;
@@ -2113,6 +2143,7 @@ export function IssueChatThread({
       onCancelQueued,
       interruptingQueuedRunId,
       onImageClick,
+      assigneeValue,
     }),
     [
       feedbackVoteByTargetId,
@@ -2130,6 +2161,7 @@ export function IssueChatThread({
       onCancelQueued,
       interruptingQueuedRunId,
       onImageClick,
+      assigneeValue,
     ],
   );
 
@@ -2161,8 +2193,9 @@ export function IssueChatThread({
             <button
               type="button"
               onClick={handleJumpToLatest}
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
             >
+              <ChevronsDown className="h-3.5 w-3.5" />
               Jump to latest
             </button>
           </div>
