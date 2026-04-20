@@ -535,6 +535,41 @@ export function buildInvocationEnvForLogs(
   return redactEnvForLogs(merged);
 }
 
+/**
+ * Returns a self-contained Python 3 one-liner that agents can use to POST
+ * JSON to the Paperclip API safely on Windows.  On Windows, passing a JSON
+ * body that contains multi-byte characters (e.g. Korean) as a curl argv
+ * argument causes the shell to re-encode the bytes through the console code
+ * page (CP949), corrupting the payload.  Python's urllib.request writes the
+ * UTF-8 bytes directly to the socket, bypassing the console layer.
+ *
+ * Usage inside a skill or agent prompt:
+ *   printf '%s' '<json>' | python3 -c "$PAPERCLIP_POST_JSON" /api/path [METHOD]
+ *
+ * The script reads the JSON body from stdin, so the shell never processes the
+ * multi-byte characters as argv tokens.
+ */
+export function buildPaperclipPostScript(): string {
+  return (
+    "import sys,urllib.request,os;" +
+    "body=sys.stdin.buffer.read();" +
+    "method=sys.argv[2] if len(sys.argv)>2 else 'POST';" +
+    "req=urllib.request.Request(" +
+    "os.environ['PAPERCLIP_API_URL']+sys.argv[1]," +
+    "data=body," +
+    "method=method," +
+    "headers={" +
+    "'Content-Type':'application/json'," +
+    "'Authorization':'Bearer '+os.environ['PAPERCLIP_API_KEY']," +
+    "'X-Paperclip-Run-Id':os.environ.get('PAPERCLIP_RUN_ID','')" +
+    "});" +
+    "import urllib.error;" +
+    "try:" +
+    " r=urllib.request.urlopen(req);print(r.read().decode('utf-8'))" +
+    "except urllib.error.HTTPError as e:print(e.read().decode('utf-8'),file=sys.stderr);sys.exit(1)"
+  );
+}
+
 export function buildPaperclipEnv(agent: { id: string; companyId: string }): Record<string, string> {
   const resolveHostForUrl = (rawHost: string): string => {
     const host = rawHost.trim();
@@ -552,6 +587,7 @@ export function buildPaperclipEnv(agent: { id: string; companyId: string }): Rec
   const runtimePort = process.env.PAPERCLIP_LISTEN_PORT ?? process.env.PORT ?? "3100";
   const apiUrl = process.env.PAPERCLIP_API_URL ?? `http://${runtimeHost}:${runtimePort}`;
   vars.PAPERCLIP_API_URL = apiUrl;
+  vars.PAPERCLIP_POST_JSON = buildPaperclipPostScript();
   return vars;
 }
 

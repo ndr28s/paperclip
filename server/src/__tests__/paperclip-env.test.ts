@@ -55,4 +55,13 @@ describe("buildPaperclipEnv", () => {
 
     expect(env.PAPERCLIP_API_URL).toBe("http://[::1]:3101");
   });
+
+  it("injects PAPERCLIP_POST_JSON as a non-empty Python script", () => {
+    const env = buildPaperclipEnv({ id: "agent-1", companyId: "company-1" });
+
+    expect(typeof env.PAPERCLIP_POST_JSON).toBe("string");
+    expect(env.PAPERCLIP_POST_JSON.length).toBeGreaterThan(0);
+    expect(env.PAPERCLIP_POST_JSON).toContain("urllib.request");
+    expect(env.PAPERCLIP_POST_JSON).toContain("PAPERCLIP_API_KEY");
+  });
 });
