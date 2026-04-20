@@ -41,12 +41,14 @@ function normalizeExperimentalSettings(raw: unknown): InstanceExperimentalSettin
       enableIsolatedWorkspaces: parsed.data.enableIsolatedWorkspaces ?? false,
       autoRestartDevServerWhenIdle: parsed.data.autoRestartDevServerWhenIdle ?? false,
       enableAgentMemory: parsed.data.enableAgentMemory ?? false,
+      enableAutoSkillCreation: parsed.data.enableAutoSkillCreation ?? false,
     };
   }
   return {
     enableIsolatedWorkspaces: false,
     autoRestartDevServerWhenIdle: false,
     enableAgentMemory: false,
+    enableAutoSkillCreation: false,
   };
 }
 

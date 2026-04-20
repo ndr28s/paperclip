@@ -924,6 +924,54 @@ export function resolveRuntimeSessionParamsForWorkspace(input: {
   };
 }
 
+const HERMES_SKILL_PROPOSAL_HINT = `
+
+---
+
+## Skill Creation (Auto-Creation Enabled)
+
+While working on this task, if you discover a reusable pattern or technique, propose it as a Paperclip skill by including this block anywhere in your final output:
+
+\`\`\`skill
+---
+name: your-skill-slug
+description: One-line description of what this skill does
+---
+# Skill Title
+
+[Skill content — instructions, templates, code snippets, etc.]
+\`\`\`
+
+The server will automatically detect and save the proposal. Saved skills are available to all agents in future runs.
+
+On Windows hosts, use \`$PAPERCLIP_POST_JSON\` instead of \`curl\` when posting JSON to the Paperclip API (avoids CP949 encoding corruption):
+
+  printf '%s' '<json>' | python3 -c "$PAPERCLIP_POST_JSON" /api/path`;
+
+function buildHermesContextOverlay(opts: {
+  issueContext: {
+    id: string;
+    identifier: string | null;
+    title: string;
+    description: string | null;
+  } | null;
+  context: Record<string, unknown>;
+  enableAutoSkillCreation: boolean;
+}): Record<string, unknown> {
+  const { issueContext, context, enableAutoSkillCreation } = opts;
+  if (!issueContext) return {};
+  const wakeReason = readNonEmptyString(context.wakeReason);
+  let taskBody = issueContext.description ?? "";
+  if (enableAutoSkillCreation) taskBody += HERMES_SKILL_PROPOSAL_HINT;
+  return {
+    taskId: issueContext.id,
+    taskKey: issueContext.identifier,
+    taskTitle: issueContext.title,
+    taskBody,
+    ...(wakeReason ? { wakeReason } : {}),
+  };
+}
+
 function parseIssueAssigneeAdapterOverrides(
   raw: unknown,
 ): ParsedIssueAssigneeAdapterOverrides | null {
@@ -3417,6 +3465,11 @@ export function heartbeatService(db: Db) {
       ...effectiveResolvedConfig,
       paperclipRuntimeSkills: runtimeSkillEntries,
       ...(agent.adapterType === "hermes_local" && { enableAgentMemory }),
+      ...(agent.adapterType === "hermes_local" && buildHermesContextOverlay({
+        issueContext,
+        context,
+        enableAutoSkillCreation,
+      })),
     };
     const workspaceOperationRecorder = workspaceOperationsSvc.createRecorder({
       companyId: agent.companyId,
