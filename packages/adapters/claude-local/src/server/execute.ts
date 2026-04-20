@@ -340,6 +340,9 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   // When instructionsFilePath is configured, build a stable content-addressed
   // file that includes both the file content and the path directive, so we only
   // need --append-system-prompt-file (Claude CLI forbids using both flags together).
+  const skillProposalHint = typeof context.paperclipSkillProposalHint === "string"
+    ? context.paperclipSkillProposalHint
+    : null;
   let combinedInstructionsContents: string | null = null;
   if (instructionsFilePath) {
     try {
@@ -349,7 +352,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
         `Resolve any relative file references from ${instructionsFileDir}. ` +
         `This base directory is authoritative for sibling instruction files such as ` +
         `./HEARTBEAT.md, ./SOUL.md, and ./TOOLS.md; do not resolve those from the parent agent directory.`;
-      combinedInstructionsContents = instructionsContent + pathDirective;
+      combinedInstructionsContents = instructionsContent + pathDirective
+        + (skillProposalHint ? `\n${skillProposalHint}` : "");
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       await onLog(
@@ -357,6 +361,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
         `[paperclip] Warning: could not read agent instructions file "${instructionsFilePath}": ${reason}\n`,
       );
     }
+  } else if (skillProposalHint) {
+    combinedInstructionsContents = skillProposalHint;
   }
   const promptBundle = await prepareClaudePromptBundle({
     companyId: agent.companyId,

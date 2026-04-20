@@ -3464,12 +3464,12 @@ export function heartbeatService(db: Db) {
     const runtimeConfig = {
       ...effectiveResolvedConfig,
       paperclipRuntimeSkills: runtimeSkillEntries,
-      ...(agent.adapterType === "hermes_local" && { enableAgentMemory }),
-      ...(agent.adapterType === "hermes_local" && buildHermesContextOverlay({
-        issueContext,
-        context,
-        enableAutoSkillCreation,
-      })),
+      ...(SESSIONED_LOCAL_ADAPTERS.has(agent.adapterType) && { enableAgentMemory }),
+      ...(agent.adapterType === "hermes_local"
+        ? buildHermesContextOverlay({ issueContext, context, enableAutoSkillCreation })
+        : (enableAutoSkillCreation && {
+            paperclipSkillProposalHint: HERMES_SKILL_PROPOSAL_HINT,
+          })),
     };
     const workspaceOperationRecorder = workspaceOperationsSvc.createRecorder({
       companyId: agent.companyId,
@@ -4156,7 +4156,7 @@ export function heartbeatService(db: Db) {
           }
         }
       }
-      if (finalizedRun && outcome === "succeeded" && agent.adapterType === "hermes_local" && enableAgentMemory) {
+      if (finalizedRun && outcome === "succeeded" && SESSIONED_LOCAL_ADAPTERS.has(agent.adapterType) && enableAgentMemory) {
         try {
           const memorySvc = agentMemoryService(db);
           const summary = typeof persistedResultJson === "object" && persistedResultJson !== null
@@ -4179,7 +4179,7 @@ export function heartbeatService(db: Db) {
           logger.warn({ err: memErr, runId }, "failed to write agent memory after run completion");
         }
       }
-      if (finalizedRun && outcome === "succeeded" && agent.adapterType === "hermes_local" && enableAutoSkillCreation) {
+      if (finalizedRun && outcome === "succeeded" && SESSIONED_LOCAL_ADAPTERS.has(agent.adapterType) && enableAutoSkillCreation) {
         try {
           const resultText = typeof persistedResultJson === "object" && persistedResultJson !== null
             ? ((persistedResultJson as Record<string, unknown>).result as string | undefined) ?? null
