@@ -249,6 +249,14 @@ const hermesLocalAdapter: ServerAdapterModule = {
           group: "Core",
         },
         {
+          key: "maxTurnsPerRun",
+          label: "Max turns per run",
+          type: "number",
+          default: 0,
+          hint: "Maximum tool-calling iterations per run (--max-turns). 0 = unlimited.",
+          group: "Core",
+        },
+        {
           key: "toolsets",
           label: "Toolsets",
           type: "text",
