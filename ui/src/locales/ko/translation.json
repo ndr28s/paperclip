@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "newIssue": "새 이슈",
+    "dashboard": "대시보드",
+    "inbox": "받은편지함",
+    "work": "작업",
+    "issues": "이슈",
+    "routines": "루틴",
+    "goals": "목표",
+    "projects": "프로젝트",
+    "agents": "에이전트",
+    "company": "회사",
+    "org": "조직",
+    "skills": "스킬",
+    "costs": "비용",
+    "activity": "활동",
+    "settings": "설정"
+  },
+  "account": {
+    "editProfile": "프로필 편집",
+    "editProfileDesc": "표시 이름과 아바타를 업데이트합니다.",
+    "instanceSettings": "인스턴스 설정",
+    "instanceSettingsDesc": "마지막으로 열었던 설정 페이지로 이동합니다.",
+    "documentation": "문서",
+    "documentationDesc": "새 탭에서 Paperclip 문서를 엽니다.",
+    "switchToLight": "라이트 모드로 전환",
+    "switchToDark": "다크 모드로 전환",
+    "toggleAppearanceDesc": "앱 외관을 전환합니다.",
+    "signOut": "로그아웃",
+    "signingOut": "로그아웃 중...",
+    "signOutDesc": "이 브라우저 세션을 종료합니다.",
+    "language": "언어",
+    "languageDesc": "표시 언어를 전환합니다.",
+    "korean": "한국어",
+    "english": "English"
+  },
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "back": "뒤로",
+    "create": "만들기",
+    "delete": "삭제",
+    "edit": "편집",
+    "close": "닫기",
+    "submit": "제출",
+    "loading": "로딩 중...",
+    "error": "오류",
+    "success": "성공",
+    "confirm": "확인",
+    "search": "검색",
+    "filter": "필터",
+    "new": "새로 만들기",
+    "add": "추가",
+    "remove": "제거",
+    "update": "업데이트",
+    "noResults": "결과 없음"
+  },
+  "agents": {
+    "title": "에이전트",
+    "newAgent": "새 에이전트",
+    "active": "활성",
+    "paused": "일시 중지",
+    "error": "오류",
+    "all": "전체",
+    "addNew": "새 에이전트 추가",
+    "askCeo": "CEO에게 새 에이전트 생성 요청",
+    "askCeoDesc": "CEO가 에이전트 설정을 처리하는 것을 추천합니다 — 조직 구조를 파악하고 보고, 권한, 어댑터를 구성할 수 있습니다.",
+    "advancedConfig": "직접 고급 설정",
+    "advancedChooseAdapter": "고급 설정을 위한 어댑터 유형을 선택하세요.",
+    "recommended": "추천",
+    "filters": "Filters",
+    "showTerminated": "종료된 에이전트 표시",
+    "noMatchFilter": "선택한 필터와 일치하는 에이전트가 없습니다.",
+    "noOrgHierarchy": "정의된 조직 계층이 없습니다.",
+    "createFirst": "첫 번째 에이전트를 만들어 시작하세요.",
+    "selectCompany": "에이전트를 보려면 회사를 선택하세요."
+  },
+  "issues": {
+    "title": "이슈",
+    "newIssue": "새 이슈",
+    "noIssues": "이슈 없음",
+    "status": {
+      "todo": "할 일",
+      "inProgress": "진행 중",
+      "done": "완료",
+      "cancelled": "취소됨",
+      "backlog": "백로그"
+    },
+    "priority": {
+      "urgent": "긴급",
+      "high": "높음",
+      "medium": "보통",
+      "low": "낮음",
+      "noPriority": "우선순위 없음"
+    }
+  },
+  "projects": {
+    "title": "프로젝트",
+    "newProject": "새 프로젝트",
+    "noProjects": "프로젝트 없음"
+  },
+  "goals": {
+    "title": "목표",
+    "newGoal": "새 목표",
+    "noGoals": "목표 없음"
+  },
+  "settings": {
+    "title": "설정",
+    "profile": "프로필",
+    "appearance": "외관",
+    "notifications": "알림"
+  }
+}

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   BookOpen,
+  Globe,
   LogOut,
   type LucideIcon,
   Moon,
@@ -93,6 +95,7 @@ export function SidebarAccountMenu({
   const queryClient = useQueryClient();
   const { isMobile, setSidebarOpen } = useSidebar();
   const { theme, toggleTheme } = useTheme();
+  const { t, i18n } = useTranslation();
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
@@ -165,33 +168,42 @@ export function SidebarAccountMenu({
 
             <div className="mt-4 space-y-1">
               <MenuAction
-                label="Edit profile"
-                description="Update your display name and avatar."
+                label={t('account.editProfile')}
+                description={t('account.editProfileDesc')}
                 icon={UserRoundPen}
                 href={PROFILE_SETTINGS_PATH}
                 onClick={closeNavigationChrome}
               />
               <MenuAction
-                label="Instance settings"
-                description="Jump back to the last settings page you opened."
+                label={t('account.instanceSettings')}
+                description={t('account.instanceSettingsDesc')}
                 icon={Settings}
                 href={instanceSettingsTarget}
                 onClick={closeNavigationChrome}
               />
               <MenuAction
-                label="Documentation"
-                description="Open Paperclip docs in a new tab."
+                label={t('account.documentation')}
+                description={t('account.documentationDesc')}
                 icon={BookOpen}
                 href={DOCS_URL}
                 external
                 onClick={() => setOpen(false)}
               />
               <MenuAction
-                label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                description="Toggle the app appearance."
+                label={theme === "dark" ? t('account.switchToLight') : t('account.switchToDark')}
+                description={t('account.toggleAppearanceDesc')}
                 icon={theme === "dark" ? Sun : Moon}
                 onClick={() => {
                   toggleTheme();
+                  setOpen(false);
+                }}
+              />
+              <MenuAction
+                label={`${t('account.language')}: ${i18n.language === 'ko' ? t('account.korean') : t('account.english')}`}
+                description={t('account.languageDesc')}
+                icon={Globe}
+                onClick={() => {
+                  i18n.changeLanguage(i18n.language === 'ko' ? 'en' : 'ko');
                   setOpen(false);
                 }}
               />
@@ -210,10 +222,10 @@ export function SidebarAccountMenu({
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-foreground">
-                      {signOutMutation.isPending ? "Signing out..." : "Sign out"}
+                      {signOutMutation.isPending ? t('account.signingOut') : t('account.signOut')}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      End this browser session.
+                      {t('account.signOutDesc')}
                     </span>
                   </span>
                 </button>

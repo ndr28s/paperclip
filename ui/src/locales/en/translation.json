@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "newIssue": "New Issue",
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "work": "Work",
+    "issues": "Issues",
+    "routines": "Routines",
+    "goals": "Goals",
+    "projects": "Projects",
+    "agents": "Agents",
+    "company": "Company",
+    "org": "Org",
+    "skills": "Skills",
+    "costs": "Costs",
+    "activity": "Activity",
+    "settings": "Settings"
+  },
+  "account": {
+    "editProfile": "Edit profile",
+    "editProfileDesc": "Update your display name and avatar.",
+    "instanceSettings": "Instance settings",
+    "instanceSettingsDesc": "Jump back to the last settings page you opened.",
+    "documentation": "Documentation",
+    "documentationDesc": "Open Paperclip docs in a new tab.",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "toggleAppearanceDesc": "Toggle the app appearance.",
+    "signOut": "Sign out",
+    "signingOut": "Signing out...",
+    "signOutDesc": "End this browser session.",
+    "language": "Language",
+    "languageDesc": "Switch display language.",
+    "korean": "한국어",
+    "english": "English"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "new": "New",
+    "add": "Add",
+    "remove": "Remove",
+    "update": "Update",
+    "noResults": "No results"
+  },
+  "agents": {
+    "title": "Agents",
+    "newAgent": "New Agent",
+    "active": "Active",
+    "paused": "Paused",
+    "error": "Error",
+    "all": "All",
+    "addNew": "Add a new agent",
+    "askCeo": "Ask the CEO to create a new agent",
+    "askCeoDesc": "We recommend letting your CEO handle agent setup — they know the org structure and can configure reporting, permissions, and adapters.",
+    "advancedConfig": "I want advanced configuration myself",
+    "advancedChooseAdapter": "Choose your adapter type for advanced setup.",
+    "recommended": "Recommended",
+    "filters": "Filters",
+    "showTerminated": "Show terminated",
+    "noMatchFilter": "No agents match the selected filter.",
+    "noOrgHierarchy": "No organizational hierarchy defined.",
+    "createFirst": "Create your first agent to get started.",
+    "selectCompany": "Select a company to view agents."
+  },
+  "issues": {
+    "title": "Issues",
+    "newIssue": "New Issue",
+    "noIssues": "No issues",
+    "status": {
+      "todo": "Todo",
+      "inProgress": "In Progress",
+      "done": "Done",
+      "cancelled": "Cancelled",
+      "backlog": "Backlog"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "noPriority": "No priority"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "newProject": "New Project",
+    "noProjects": "No projects"
+  },
+  "goals": {
+    "title": "Goals",
+    "newGoal": "New Goal",
+    "noGoals": "No goals"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "appearance": "Appearance",
+    "notifications": "Notifications"
+  }
+}
