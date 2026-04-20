@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HUMAN_COMPANY_MEMBERSHIP_ROLE_LABELS, PERMISSION_KEYS, type PermissionKey } from "@paperclipai/shared";
 import { ShieldCheck, Users } from "lucide-react";
@@ -46,6 +47,7 @@ function getImplicitGrantKeys(role: CompanyMember["membershipRole"]) {
 }
 
 export function CompanyAccess() {
+  const { t } = useTranslation();
   const { selectedCompany, selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const { pushToast } = useToast();
@@ -156,11 +158,11 @@ export function CompanyAccess() {
   }, [editingMember]);
 
   if (!selectedCompanyId) {
-    return <div className="text-sm text-muted-foreground">Select a company to manage access.</div>;
+    return <div className="text-sm text-muted-foreground">{t("companyAccess.selectCompany")}</div>;
   }
 
   if (membersQuery.isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading company access…</div>;
+    return <div className="text-sm text-muted-foreground">{t("companyAccess.loading")}</div>;
   }
 
   if (membersQuery.error) {
@@ -187,7 +189,7 @@ export function CompanyAccess() {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-lg font-semibold">Company Access</h1>
+          <h1 className="text-lg font-semibold">{t("companyAccess.title")}</h1>
         </div>
         <p className="max-w-3xl text-sm text-muted-foreground">
           Manage company user memberships, membership status, and explicit permission grants for {selectedCompany?.name}.

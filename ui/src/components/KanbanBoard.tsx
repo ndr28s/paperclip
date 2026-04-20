@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "@/lib/router";
 import {
   DndContext,
@@ -193,6 +194,7 @@ export function KanbanBoard({
   liveIssueIds,
   onUpdateIssue,
 }: KanbanBoardProps) {
+  const { t } = useTranslation();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
