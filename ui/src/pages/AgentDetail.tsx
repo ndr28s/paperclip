@@ -3,7 +3,9 @@ import { useParams, useNavigate, Link, Navigate, useBeforeUnload } from "@/lib/r
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   agentsApi,
+  agentMemoryApi,
   type AgentKey,
+  type AgentMemoryEntry,
   type ClaudeLoginResult,
   type AgentPermissionUpdate,
 } from "../api/agents";
@@ -224,7 +226,7 @@ function scrollToContainerBottom(container: ScrollContainer, behavior: ScrollBeh
   container.scrollTo({ top: container.scrollHeight, behavior });
 }
 
-type AgentDetailView = "dashboard" | "instructions" | "configuration" | "skills" | "runs" | "budget";
+type AgentDetailView = "dashboard" | "instructions" | "configuration" | "skills" | "runs" | "budget" | "memory";
 
 function parseAgentDetailView(value: string | null): AgentDetailView {
   if (value === "instructions" || value === "prompts") return "instructions";
@@ -232,6 +234,7 @@ function parseAgentDetailView(value: string | null): AgentDetailView {
   if (value === "skills") return "skills";
   if (value === "budget") return "budget";
   if (value === "runs") return value;
+  if (value === "memory") return "memory";
   return "dashboard";
 }
 
@@ -682,6 +685,12 @@ export function AgentDetail() {
     enabled: !!resolvedCompanyId && needsDashboardData,
   });
 
+  const { data: experimentalSettings } = useQuery({
+    queryKey: queryKeys.instance.experimentalSettings,
+    queryFn: () => instanceSettingsApi.getExperimental(),
+  });
+  const memoryEnabled = experimentalSettings?.enableAgentMemory === true;
+
   const { data: budgetOverview } = useQuery({
     queryKey: queryKeys.budgets.overview(resolvedCompanyId ?? "__none__"),
     queryFn: () => budgetsApi.overview(resolvedCompanyId!),
@@ -749,6 +758,8 @@ export function AgentDetail() {
               ? "runs"
               : activeView === "budget"
                 ? "budget"
+                : activeView === "memory"
+                  ? "memory"
               : "dashboard";
     if (routeAgentRef !== canonicalAgentRef || urlTab !== canonicalTab) {
       navigate(`/agents/${canonicalAgentRef}/${canonicalTab}`, { replace: true });
@@ -1012,6 +1023,7 @@ export function AgentDetail() {
               { value: "configuration", label: "Configuration" },
               { value: "runs", label: "Runs" },
               { value: "budget", label: "Budget" },
+              ...(memoryEnabled ? [{ value: "memory", label: "Memory" }] : []),
             ]}
             value={activeView}
             onValueChange={(value) => navigate(`/agents/${canonicalAgentRef}/${value}`)}
@@ -1147,6 +1159,110 @@ export function AgentDetail() {
           />
         </div>
       ) : null}
+
+      {activeView === "memory" && resolvedCompanyId && agent && (
+        <AgentMemoryTab agentId={agent.id} companyId={resolvedCompanyId} />
+      )}
+    </div>
+  );
+}
+
+/* ---- AgentMemoryTab ---- */
+
+function AgentMemoryTab({ agentId, companyId }: { agentId: string; companyId: string }) {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { pushToast } = useToastActions();
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(value), 400);
+  };
+
+  const memoryQuery = useQuery({
+    queryKey: ["agent-memory", companyId, agentId, debouncedSearch],
+    queryFn: () =>
+      debouncedSearch.trim()
+        ? agentMemoryApi.search(companyId, agentId, debouncedSearch.trim())
+        : agentMemoryApi.list(companyId, agentId),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (memoryId: string) => agentMemoryApi.remove(companyId, agentId, memoryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agent-memory", companyId, agentId] });
+      pushToast({ title: "Memory entry deleted", tone: "success" });
+    },
+    onError: () => {
+      pushToast({ title: "Failed to delete memory entry", tone: "error" });
+    },
+  });
+
+  const entries: AgentMemoryEntry[] = memoryQuery.data?.results ?? [];
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search memory…"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="max-w-xs"
+        />
+        {memoryQuery.isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      </div>
+
+      {memoryQuery.isLoading ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">
+          {debouncedSearch ? "No memories match your search." : "No memory entries yet."}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <div
+              key={entry.id}
+              className="flex items-start gap-3 rounded-lg border border-border bg-card p-3"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm whitespace-pre-wrap break-words">{entry.body}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">
+                    {formatDate(entry.createdAt)}
+                  </span>
+                  {entry.sessionId && (
+                    <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      · session {entry.sessionId.slice(0, 8)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => deleteMutation.mutate(entry.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete</TooltipContent>
+              </Tooltip>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

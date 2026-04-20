@@ -203,3 +203,28 @@ export interface AvailableSkill {
   description: string;
   isPaperclipManaged: boolean;
 }
+
+export interface AgentMemoryEntry {
+  id: string;
+  agentId: string;
+  companyId: string;
+  sessionId: string | null;
+  body: string;
+  embeddingHint: string | null;
+  createdAt: string;
+}
+
+export const agentMemoryApi = {
+  list: (companyId: string, agentId: string, limit = 20) =>
+    api.get<{ results: AgentMemoryEntry[] }>(
+      `/companies/${encodeURIComponent(companyId)}/agents/${encodeURIComponent(agentId)}/memory?limit=${limit}`,
+    ),
+  search: (companyId: string, agentId: string, q: string, limit = 20) =>
+    api.get<{ results: AgentMemoryEntry[] }>(
+      `/companies/${encodeURIComponent(companyId)}/agents/${encodeURIComponent(agentId)}/memory/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
+  remove: (companyId: string, agentId: string, memoryId: string) =>
+    api.delete<void>(
+      `/companies/${encodeURIComponent(companyId)}/agents/${encodeURIComponent(agentId)}/memory/${encodeURIComponent(memoryId)}`,
+    ),
+};
