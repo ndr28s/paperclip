@@ -173,7 +173,33 @@ This starts the API server at `http://localhost:3100`. An embedded PostgreSQL da
 
 ## Windows
 
-PowerShell 또는 cmd에서 그대로 실행할 수 있습니다.
+### 방법 A — 실행 파일 (권장)
+
+터미널 없이 더블클릭으로 Paperclip을 실행할 수 있습니다. `launcher/` 패키지가 Electron 기반 Windows 트레이 런처를 제공합니다.
+
+**빌드 (설치 파일 생성)**
+
+```powershell
+cd launcher
+npm install
+npm run build
+```
+
+`launcher/dist/Paperclip Setup.exe` 가 생성됩니다. 설치 후 실행하면:
+
+- 시스템 트레이에 Paperclip 아이콘이 표시됩니다 (노랑=시작 중, 초록=실행 중, 빨강=중지)
+- 트레이 메뉴에서 **대시보드 열기 / 재시작 / 종료** 를 선택할 수 있습니다
+- 서버가 백그라운드에서 자동 실행되며 `http://localhost:3100` 에서 접속합니다
+
+**개발 모드로 런처 실행**
+
+```powershell
+cd launcher
+npm install
+npm start
+```
+
+### 방법 B — PowerShell에서 직접 실행
 
 **1. 사전 준비**
 
