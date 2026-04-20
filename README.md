@@ -168,8 +168,48 @@ pnpm dev
 This starts the API server at `http://localhost:3100`. An embedded PostgreSQL database is created automatically — no setup required.
 
 > **Requirements:** Node.js 20+, pnpm 9.15+
->
-> **Windows users:** The build is now cross-platform — `pnpm install && pnpm build` works in PowerShell or cmd without any extra setup. Some auxiliary scripts (release, smoke tests, db backup) are still `.sh` files; if you need to run those, install [Git for Windows](https://git-scm.com/download/win) and add a project-level `.npmrc` containing `script-shell=C:/Program Files/Git/bin/bash.exe` so pnpm uses bash for those scripts.
+
+<br/>
+
+## Windows
+
+PowerShell 또는 cmd에서 그대로 실행할 수 있습니다.
+
+**1. 사전 준비**
+
+- [Node.js 20+](https://nodejs.org/) 설치
+- pnpm 설치:
+  ```powershell
+  npm install -g pnpm
+  ```
+- [Git for Windows](https://git-scm.com/download/win) 설치
+
+**2. 클론 및 실행**
+
+```powershell
+git clone https://github.com/ndr28s/paperclip.git
+cd paperclip
+pnpm install
+pnpm dev
+```
+
+브라우저에서 `http://localhost:3100` 접속.
+
+**3. 보조 스크립트 (선택)**
+
+릴리즈, 스모크 테스트, DB 백업 등 일부 스크립트는 `.sh` 파일입니다. 이를 실행해야 할 경우 프로젝트 루트에 `.npmrc` 파일을 생성하세요:
+
+```
+script-shell=C:/Program Files/Git/bin/bash.exe
+```
+
+**4. 환경 변수 설정 (PowerShell)**
+
+```powershell
+$env:DATABASE_URL = "postgres://user:pass@host:5432/paperclip"
+pnpm build
+pnpm start
+```
 
 <br/>
 
