@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "@/lib/router";
 import { authApi } from "../api/auth";
@@ -11,6 +12,7 @@ import { Sparkles } from "lucide-react";
 type AuthMode = "sign_in" | "sign_up";
 
 export function AuthPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -83,12 +85,12 @@ export function AuthPage() {
           </div>
 
           <h1 className="text-xl font-semibold">
-            {mode === "sign_in" ? "Sign in to glit" : "Create your glit account"}
+            {mode === "sign_in" ? t("authPage.signInTo") : t("authPage.createAccount")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "sign_in"
-              ? "Use your email and password to access this instance."
-              : "Create an account for this instance. Email confirmation is not required in v1."}
+              ? t("authPage.signInDesc")
+              : t("authPage.signUpDesc")}
           </p>
 
           <form
@@ -99,7 +101,7 @@ export function AuthPage() {
               event.preventDefault();
               if (mutation.isPending) return;
               if (!canSubmit) {
-                setError("Please fill in all required fields.");
+                setError(t("authPage.fillRequired"));
                 return;
               }
               mutation.mutate();
@@ -107,7 +109,7 @@ export function AuthPage() {
           >
             {mode === "sign_up" && (
               <div>
-                <label htmlFor="name" className="text-xs text-muted-foreground mb-1 block">Name</label>
+                <label htmlFor="name" className="text-xs text-muted-foreground mb-1 block">{t("authPage.name")}</label>
                 <input
                   id="name"
                   name="name"
@@ -120,7 +122,7 @@ export function AuthPage() {
               </div>
             )}
             <div>
-              <label htmlFor="email" className="text-xs text-muted-foreground mb-1 block">Email</label>
+              <label htmlFor="email" className="text-xs text-muted-foreground mb-1 block">{t("authPage.email")}</label>
               <input
                 id="email"
                 name="email"
@@ -133,7 +135,7 @@ export function AuthPage() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="text-xs text-muted-foreground mb-1 block">Password</label>
+              <label htmlFor="password" className="text-xs text-muted-foreground mb-1 block">{t("authPage.password")}</label>
               <input
                 id="password"
                 name="password"
@@ -152,15 +154,15 @@ export function AuthPage() {
               className={`w-full ${!canSubmit && !mutation.isPending ? "opacity-50" : ""}`}
             >
               {mutation.isPending
-                ? "Working…"
+                ? t("authPage.working")
                 : mode === "sign_in"
-                  ? "Sign In"
-                  : "Create Account"}
+                  ? t("authPage.signIn")
+                  : t("authPage.createAccountBtn")}
             </Button>
           </form>
 
           <div className="mt-5 text-sm text-muted-foreground">
-            {mode === "sign_in" ? "Need an account?" : "Already have an account?"}{" "}
+            {mode === "sign_in" ? t("authPage.needAccount") : t("authPage.alreadyHaveAccount")}{" "}
             <button
               type="button"
               className="font-medium text-foreground underline underline-offset-2"
@@ -169,7 +171,7 @@ export function AuthPage() {
                 setMode(mode === "sign_in" ? "sign_up" : "sign_in");
               }}
             >
-              {mode === "sign_in" ? "Create one" : "Sign in"}
+              {mode === "sign_in" ? t("authPage.createOne") : t("authPage.signInLink")}
             </button>
           </div>
         </div>

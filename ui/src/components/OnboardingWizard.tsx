@@ -27,6 +27,7 @@ import { listUIAdapters } from "../adapters";
 import { useDisabledAdaptersSync } from "../adapters/use-disabled-adapters";
 import { useAdapterCapabilities } from "../adapters/use-adapter-capabilities";
 import { getAdapterDisplay } from "../adapters/adapter-display-registry";
+import { useTranslation } from "react-i18next";
 import { defaultCreateValues } from "./agent-config-defaults";
 import { parseOnboardingGoalInput } from "../lib/onboarding-goal";
 import {
@@ -67,6 +68,7 @@ const DEFAULT_TASK_DESCRIPTION = `You are the CEO. You set the direction for the
 - break the roadmap into concrete tasks and start delegating work`;
 
 export function OnboardingWizard() {
+  const { t } = useTranslation();
   const { onboardingOpen, onboardingOptions, closeOnboarding } = useDialog();
   const { companies, setSelectedCompanyId, loading: companiesLoading } = useCompany();
   const queryClient = useQueryClient();
@@ -640,10 +642,10 @@ export function OnboardingWizard() {
               <div className="flex items-center gap-0 mb-8 border-b border-border">
                 {(
                   [
-                    { step: 1 as Step, label: "Company", icon: Building2 },
-                    { step: 2 as Step, label: "Agent", icon: Bot },
-                    { step: 3 as Step, label: "Task", icon: ListTodo },
-                    { step: 4 as Step, label: "Launch", icon: Rocket }
+                    { step: 1 as Step, label: t("onboarding.company"), icon: Building2 },
+                    { step: 2 as Step, label: t("onboarding.agent"), icon: Bot },
+                    { step: 3 as Step, label: t("onboarding.task"), icon: ListTodo },
+                    { step: 4 as Step, label: t("onboarding.launch"), icon: Rocket }
                   ] as const
                 ).map(({ step: s, label, icon: Icon }) => (
                   <button
@@ -966,7 +968,7 @@ export function OnboardingWizard() {
                           disabled={adapterEnvLoading}
                           onClick={() => void runAdapterEnvironmentTest()}
                         >
-                          {adapterEnvLoading ? "Testing..." : "Test now"}
+                          {adapterEnvLoading ? t("onboarding.testing") : t("onboarding.testNow")}
                         </Button>
                       </div>
 
@@ -1214,7 +1216,7 @@ export function OnboardingWizard() {
                       ) : (
                         <ArrowRight className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Creating..." : "Next"}
+                      {loading ? t("onboarding.creating") : t("onboarding.next")}
                     </Button>
                   )}
                   {step === 2 && (
@@ -1230,7 +1232,7 @@ export function OnboardingWizard() {
                       ) : (
                         <ArrowRight className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Creating..." : "Next"}
+                      {loading ? t("onboarding.creating") : t("onboarding.next")}
                     </Button>
                   )}
                   {step === 3 && (
@@ -1244,7 +1246,7 @@ export function OnboardingWizard() {
                       ) : (
                         <ArrowRight className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Creating..." : "Next"}
+                      {loading ? t("onboarding.creating") : t("onboarding.next")}
                     </Button>
                   )}
                   {step === 4 && (
@@ -1254,7 +1256,7 @@ export function OnboardingWizard() {
                       ) : (
                         <ArrowRight className="h-3.5 w-3.5 mr-1" />
                       )}
-                      {loading ? "Creating..." : "Create & Open Issue"}
+                      {loading ? t("onboarding.creating") : t("onboarding.createAndOpenIssue")}
                     </Button>
                   )}
                 </div>
