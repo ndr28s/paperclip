@@ -2,24 +2,28 @@
   "name": "paperclip-launcher",
   "version": "1.0.0",
   "description": "Paperclip Windows Tray Launcher",
+  "author": "Paperclip",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win",
-    "build:dir": "electron-builder --win --dir"
+    "build": "electron-packager . Paperclip --platform=win32 --arch=x64 --out=dist --overwrite --electron-version=34.5.8",
+    "build:installer": "electron-builder --win"
   },
   "dependencies": {
     "open": "^10.1.0"
   },
   "devDependencies": {
+    "@electron/packager": "^18.3.5",
     "electron": "^34.0.0",
     "electron-builder": "^25.0.0"
   },
   "build": {
     "appId": "ai.paperclip.launcher",
     "productName": "Paperclip",
+    "asar": false,
     "win": {
       "target": "nsis",
+      "signingHashAlgorithms": null,
       "icon": "src/icon.ico"
     },
     "nsis": {
@@ -35,7 +39,6 @@
           "server/dist/**",
           "cli/dist/**",
           "packages/**/dist/**",
-          "node_modules/**",
           ".paperclip/**"
         ]
       }
