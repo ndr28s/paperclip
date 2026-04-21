@@ -17,6 +17,23 @@ function run(cmd, cwd, env) {
   execSync(cmd, { cwd, stdio: 'inherit', env: { ...process.env, ...env } });
 }
 
+function getVersion(pkgDir) {
+  try { return JSON.parse(readFileSync(resolve(pkgDir, 'package.json'), 'utf-8')).version; }
+  catch { return null; }
+}
+
+// Parse a pnpm virtual-store entry name to the package name it hosts.
+// "better-call@1.1.8_zod@4.3.6"  -> "better-call"
+// "@better-auth+core@1.4.18_..."  -> "@better-auth/core"
+function parsePnpmEntryName(entryName) {
+  if (entryName.startsWith('@')) {
+    const m = entryName.match(/^(@[^+]+)\+([^@_]+)@/);
+    return m ? `${m[1]}/${m[2]}` : null;
+  }
+  const i = entryName.indexOf('@');
+  return i > 0 ? entryName.slice(0, i) : null;
+}
+
 // pnpm deploy only creates top-level node_modules entries for the target
 // package's DIRECT dependencies.  Transitive deps (e.g. postgres, which is a
 // dep of @paperclipai/db) live only inside node_modules/.pnpm/<pkg>/node_modules/.
@@ -55,6 +72,144 @@ function hoistTransitiveDeps(nodeModulesDir) {
     }
   }
   console.log(`  Hoisted ${hoisted} transitive dep(s) to top-level node_modules`);
+}
+
+// After hoisting everything to a flat top-level, packages that depend on a
+// DIFFERENT MAJOR version of a library lose pnpm's peer-isolation (symlinks).
+// For example, better-auth@1.4.18 has zod@^4.3.5 as a direct dep; its .pnpm
+// entry sibling is zod@4.x.  After flattening, "import zod" resolves to the
+// top-level zod@3.x (server's direct dep) and .meta() is missing.
+//
+// Fix: for each top-level package, scan its .pnpm sibling deps.  When a
+// sibling is a different major version than the top-level one, nest the
+// sibling inside that package's own node_modules/ so Node.js finds it first.
+function nestVersionConflicts(nodeModulesDir) {
+  const pnpmDir = resolve(nodeModulesDir, '.pnpm');
+  const workspacePnpm = resolve(repoRoot, 'node_modules', '.pnpm');
+  if (!existsSync(pnpmDir)) return;
+  let nested = 0;
+
+  for (const entry of readdirSync(pnpmDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const primaryName = parsePnpmEntryName(entry.name);
+    if (!primaryName) continue;
+
+    // Only process entries whose primary package is already at the top level.
+    const primaryParts = primaryName.split('/');
+    const primaryTopDir = primaryParts.length === 2
+      ? resolve(nodeModulesDir, primaryParts[0], primaryParts[1])
+      : resolve(nodeModulesDir, primaryName);
+    if (!existsSync(primaryTopDir)) continue;
+
+    const entryMods = resolve(pnpmDir, entry.name, 'node_modules');
+    if (!existsSync(entryMods)) continue;
+
+    // Iterate siblings (other packages co-located in this entry's node_modules).
+    const processDepPair = (depName, srcDir) => {
+      if (depName === primaryName) return;
+      const depParts = depName.split('/');
+      const topLevelDir = depParts.length === 2
+        ? resolve(nodeModulesDir, depParts[0], depParts[1])
+        : resolve(nodeModulesDir, depName);
+      if (!existsSync(topLevelDir)) return; // Not hoisted — skip.
+
+      const topVer = getVersion(topLevelDir);
+      const srcVer = getVersion(srcDir);
+      if (!topVer || !srcVer) return;
+      if (topVer.split('.')[0] === srcVer.split('.')[0]) return; // Same major — ok.
+
+      const nestBase = depParts.length === 2
+        ? resolve(primaryTopDir, 'node_modules', depParts[0])
+        : resolve(primaryTopDir, 'node_modules');
+      const nestDest = depParts.length === 2
+        ? resolve(nestBase, depParts[1])
+        : resolve(nestBase, depName);
+      if (existsSync(nestDest)) return;
+
+      mkdirSync(nestBase, { recursive: true });
+      cpSync(srcDir, nestDest, { recursive: true });
+      console.log(`  Nested ${depName}@${srcVer} into ${primaryName}/ (top-level has ${topVer})`);
+      nested++;
+    };
+
+    for (const dep of readdirSync(entryMods, { withFileTypes: true })) {
+      if (!dep.isDirectory() || dep.name === '.bin') continue;
+      if (dep.name.startsWith('@')) {
+        const scopeDir = resolve(entryMods, dep.name);
+        if (!existsSync(scopeDir)) continue;
+        for (const scoped of readdirSync(scopeDir, { withFileTypes: true })) {
+          if (scoped.isDirectory()) {
+            processDepPair(`${dep.name}/${scoped.name}`, resolve(scopeDir, scoped.name));
+          }
+        }
+      } else {
+        processDepPair(dep.name, resolve(entryMods, dep.name));
+      }
+    }
+  }
+
+  // Also fix packages whose peerDependencies require a higher major than what
+  // landed at the top level (e.g. better-call needs zod@^4 but got zod@3).
+  // Source: workspace .pnpm store which already has the right version.
+  for (const e of readdirSync(nodeModulesDir, { withFileTypes: true })) {
+    if (!e.isDirectory() || e.name === '.pnpm' || e.name === '.bin') continue;
+    const pkgNames = e.name.startsWith('@')
+      ? readdirSync(resolve(nodeModulesDir, e.name), { withFileTypes: true })
+          .filter(s => s.isDirectory())
+          .map(s => `${e.name}/${s.name}`)
+      : [e.name];
+
+    for (const pkgName of pkgNames) {
+      const pkgParts = pkgName.split('/');
+      const pkgDir = pkgParts.length === 2
+        ? resolve(nodeModulesDir, pkgParts[0], pkgParts[1])
+        : resolve(nodeModulesDir, pkgName);
+      let pkg;
+      try { pkg = JSON.parse(readFileSync(resolve(pkgDir, 'package.json'), 'utf-8')); } catch { continue; }
+      const peers = pkg.peerDependencies || {};
+      for (const [peer, range] of Object.entries(peers)) {
+        const m = range.match(/\^?>=?\s*(\d+)/);
+        if (!m) continue;
+        const requiredMajor = parseInt(m[1]);
+        const peerParts = peer.split('/');
+        const topPeerDir = peerParts.length === 2
+          ? resolve(nodeModulesDir, peerParts[0], peerParts[1])
+          : resolve(nodeModulesDir, peer);
+        if (!existsSync(topPeerDir)) continue;
+        const topVer = getVersion(topPeerDir);
+        if (!topVer || parseInt(topVer.split('.')[0]) >= requiredMajor) continue;
+
+        // Find a satisfying version in the workspace pnpm store.
+        let src = null;
+        if (existsSync(workspacePnpm)) {
+          for (const wEntry of readdirSync(workspacePnpm, { withFileTypes: true })) {
+            if (!wEntry.isDirectory() || parsePnpmEntryName(wEntry.name) !== peer) continue;
+            const candidate = peerParts.length === 2
+              ? resolve(workspacePnpm, wEntry.name, 'node_modules', peerParts[0], peerParts[1])
+              : resolve(workspacePnpm, wEntry.name, 'node_modules', peer);
+            const v = getVersion(candidate);
+            if (v && parseInt(v.split('.')[0]) >= requiredMajor) { src = candidate; break; }
+          }
+        }
+        if (!src) continue;
+
+        const nestBase = peerParts.length === 2
+          ? resolve(pkgDir, 'node_modules', peerParts[0])
+          : resolve(pkgDir, 'node_modules');
+        const nestDest = peerParts.length === 2
+          ? resolve(nestBase, peerParts[1])
+          : resolve(nestBase, peer);
+        if (!existsSync(nestDest)) {
+          mkdirSync(nestBase, { recursive: true });
+          cpSync(src, nestDest, { recursive: true });
+          console.log(`  Nested ${peer}@${getVersion(src)} into ${pkgName}/ (peer requires ${range}, found ${topVer})`);
+          nested++;
+        }
+      }
+    }
+  }
+
+  console.log(`  Nested ${nested} version-conflict dep(s)`);
 }
 
 // pnpm deploy does not apply publishConfig overrides for workspace deps.
@@ -118,6 +273,10 @@ rmSync(pnpmDeployDir, { recursive: true, force: true });
 // of @paperclipai/db, not a direct dep of server) are invisible to Node.js.
 console.log('  Hoisting transitive dependencies...');
 hoistTransitiveDeps(resolve(serverFlatDir, 'node_modules'));
+
+// Restore peer-dep version isolation lost by the dereference+flatten step.
+console.log('  Nesting version-conflict deps...');
+nestVersionConflicts(resolve(serverFlatDir, 'node_modules'));
 
 // .pnpm virtual store is now redundant — all deps are at the top level.
 rmSync(resolve(serverFlatDir, 'node_modules', '.pnpm'), { recursive: true, force: true });
