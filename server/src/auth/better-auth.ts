@@ -77,7 +77,9 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins?
   const effectiveTrustedOrigins = trustedOrigins ?? deriveAuthTrustedOrigins(config);
 
   const publicUrl = process.env.PAPERCLIP_PUBLIC_URL ?? baseUrl;
-  const isHttpOnly = publicUrl ? publicUrl.startsWith("http://") : false;
+  // Default to non-secure cookies when no explicit HTTPS URL is configured.
+  // Better-auth defaults useSecureCookies=true in production, which breaks HTTP LAN deployments.
+  const isHttpOnly = !publicUrl || publicUrl.startsWith("http://");
 
   const authConfig = {
     baseURL: baseUrl,
