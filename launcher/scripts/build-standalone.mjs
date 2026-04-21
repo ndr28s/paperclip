@@ -39,6 +39,12 @@ rmSync(resolve(serverFlatDir, 'node_modules', '.pnpm'), { recursive: true, force
 rmSync(pnpmDeployDir, { recursive: true, force: true });
 
 console.log('\n[3/3] Packaging Electron app...');
+// Kill any running Paperclip process so electron-packager can overwrite the
+// output folder (EBUSY if the exe is still running and holds a file lock).
+execSync(
+  'powershell -NoProfile -Command "Stop-Process -Name Paperclip -Force -ErrorAction SilentlyContinue"',
+  { stdio: 'ignore' },
+);
 // electron-packager works on Windows without admin/developer-mode rights.
 // electron-builder portable fails because winCodeSign-2.6.0.7z contains
 // macOS dylib symlinks that 7-Zip cannot create on Windows without elevated
