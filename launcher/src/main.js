@@ -161,6 +161,20 @@ function spawnServer() {
     const serverCwd = path.join(process.resourcesPath, 'server');
 
     serverIsUtilityProcess = true;
+
+    // Write server stdout/stderr to a log file so crashes are diagnosable
+    // when running as a packaged exe (no visible console).
+    const logDir = app.getPath('logs');
+    fs.mkdirSync(logDir, { recursive: true });
+    const logPath = path.join(logDir, 'server.log');
+    const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+    const logLine = (tag, data) => {
+      const line = `[${new Date().toISOString()}] ${tag} ${data.toString().trimEnd()}\n`;
+      logStream.write(line);
+      console.log(line.trimEnd());
+    };
+    logLine('INFO', `Starting server — entry: ${serverEntry}`);
+
     const proc = utilityProcess.fork(serverEntry, [], {
       env: {
         ...process.env,
@@ -175,15 +189,18 @@ function spawnServer() {
     });
 
     proc.on('spawn', () => {
-      console.log(`[launcher] utility process spawned with pid ${proc.pid}`);
+      logLine('INFO', `Server process spawned pid=${proc.pid}`);
     });
 
     if (proc.stdout) {
-      proc.stdout.on('data', (d) => console.log('[server]', d.toString().trim()));
+      proc.stdout.on('data', (d) => logLine('OUT', d));
     }
     if (proc.stderr) {
-      proc.stderr.on('data', (d) => console.error('[server]', d.toString().trim()));
+      proc.stderr.on('data', (d) => logLine('ERR', d));
     }
+
+    // Store logPath so exit handler can show it in the notification.
+    proc._logPath = logPath;
 
     return proc;
   } else {
@@ -225,6 +242,7 @@ function startServer() {
     });
   }
 
+  const startLogPath = serverProcess._logPath || null;
   serverProcess.on('exit', (code) => {
     serverReady = false;
     const wasUserStop = userInitiatedStop;
@@ -234,7 +252,8 @@ function startServer() {
       // Unexpected exit.
       console.warn(`[launcher] Server exited unexpectedly (code=${code})`);
       updateTrayStatus('stopped');
-      showNotification('Paperclip 중지됨', '서버가 예기치 않게 종료되었습니다.');
+      const detail = startLogPath ? `로그: ${startLogPath}` : '';
+      showNotification('Paperclip 중지됨', `서버가 예기치 않게 종료되었습니다 (code=${code}). ${detail}`);
     }
   });
 
