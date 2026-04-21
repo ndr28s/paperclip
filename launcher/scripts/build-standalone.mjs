@@ -47,7 +47,23 @@ console.log('\n[2/3] Creating production server bundle...');
 rmSync(pnpmDeployDir, { recursive: true, force: true });
 rmSync(serverFlatDir, { recursive: true, force: true });
 mkdirSync(resolve(launcherDir, 'dist'), { recursive: true });
+
+// pnpm deploy does not run lifecycle scripts (prepack), so server/ui-dist/
+// would be missing.  Copy it manually from the UI build output.
+const uiDistSrc = resolve(repoRoot, 'ui', 'dist');
+const uiDistDest = resolve(repoRoot, 'server', 'ui-dist');
+if (existsSync(uiDistSrc)) {
+  console.log('  Copying UI dist -> server/ui-dist...');
+  rmSync(uiDistDest, { recursive: true, force: true });
+  cpSync(uiDistSrc, uiDistDest, { recursive: true });
+} else {
+  console.warn('  WARNING: ui/dist not found; server will not serve the frontend');
+}
+
 run(`pnpm deploy --filter @paperclipai/server --prod "${pnpmDeployDir}"`, repoRoot);
+
+// Remove the server/ui-dist copy we created (keep source tree clean).
+rmSync(uiDistDest, { recursive: true, force: true });
 
 // pnpm creates node_modules with Windows symlinks; electron-packager can't
 // recreate them in its temp dir without admin rights.  Copy everything with
