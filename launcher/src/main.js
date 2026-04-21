@@ -3,7 +3,20 @@
 const { app, Tray, Menu, nativeImage, shell, Notification } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
+
+// Walk up from startDir until we find pnpm-workspace.yaml (repo root).
+function findRepoRoot(startDir) {
+  let dir = startDir;
+  for (let i = 0; i < 10; i++) {
+    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Minimal 16x16 PNG icons encoded as base64.
@@ -140,25 +153,17 @@ function updateMenu(status) {
 // Server spawn
 // ---------------------------------------------------------------------------
 function spawnServer() {
-  const isDev = !app.isPackaged;
-  let cmd, args, cwd;
+  // Find repo root starting from the exe directory (works for both dev and packaged).
+  const repoRoot = findRepoRoot(path.dirname(app.getPath('exe')));
 
-  if (isDev) {
-    // Development: run `pnpm dev` from the repo root (two levels up from src/).
-    cwd = path.resolve(__dirname, '../../');
-    cmd = 'pnpm';
-    args = ['dev'];
-  } else {
-    // Production: invoke the bundled CLI entry point via node.
-    const resourcesPath = process.resourcesPath;
-    const appDir = path.join(resourcesPath, 'app');
-    cwd = appDir;
-    cmd = process.platform === 'win32' ? 'node.exe' : 'node';
-    args = [path.join(appDir, 'cli', 'dist', 'index.js'), 'start'];
+  if (!repoRoot) {
+    showNotification('Paperclip 오류', 'paperclip 저장소를 찾을 수 없습니다. launcher/ 폴더가 저장소 안에 있는지 확인하세요.');
+    updateTrayStatus('stopped');
+    return null;
   }
 
-  return spawn(cmd, args, {
-    cwd,
+  return spawn('pnpm', ['dev'], {
+    cwd: repoRoot,
     shell: true,
     windowsHide: true,
     env: { ...process.env, PAPERCLIP_LISTEN_PORT: String(PORT) },
@@ -171,6 +176,7 @@ function startServer() {
   updateTrayStatus('starting');
 
   serverProcess = spawnServer();
+  if (!serverProcess) return;
 
   serverProcess.on('error', (err) => {
     console.error('[launcher] Failed to start server process:', err);
