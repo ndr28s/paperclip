@@ -17,6 +17,46 @@ function run(cmd, cwd, env) {
   execSync(cmd, { cwd, stdio: 'inherit', env: { ...process.env, ...env } });
 }
 
+// pnpm deploy only creates top-level node_modules entries for the target
+// package's DIRECT dependencies.  Transitive deps (e.g. postgres, which is a
+// dep of @paperclipai/db) live only inside node_modules/.pnpm/<pkg>/node_modules/.
+// Node.js cannot find them there, so we hoist everything from .pnpm to the
+// flat top-level before removing the virtual store.
+function hoistTransitiveDeps(nodeModulesDir) {
+  const pnpmDir = resolve(nodeModulesDir, '.pnpm');
+  if (!existsSync(pnpmDir)) return;
+  let hoisted = 0;
+  for (const entry of readdirSync(pnpmDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const entryMods = resolve(pnpmDir, entry.name, 'node_modules');
+    if (!existsSync(entryMods)) continue;
+    for (const pkg of readdirSync(entryMods, { withFileTypes: true })) {
+      if (!pkg.isDirectory() || pkg.name === '.bin' || pkg.name === '.modules.yaml') continue;
+      if (pkg.name.startsWith('@')) {
+        // Scoped package: iterate one level deeper (@scope/name)
+        const scopeDir = resolve(entryMods, pkg.name);
+        if (!existsSync(scopeDir)) continue;
+        for (const scoped of readdirSync(scopeDir, { withFileTypes: true })) {
+          if (!scoped.isDirectory()) continue;
+          const dest = resolve(nodeModulesDir, pkg.name, scoped.name);
+          if (!existsSync(dest)) {
+            mkdirSync(resolve(nodeModulesDir, pkg.name), { recursive: true });
+            cpSync(resolve(scopeDir, scoped.name), dest, { recursive: true });
+            hoisted++;
+          }
+        }
+      } else {
+        const dest = resolve(nodeModulesDir, pkg.name);
+        if (!existsSync(dest)) {
+          cpSync(resolve(entryMods, pkg.name), dest, { recursive: true });
+          hoisted++;
+        }
+      }
+    }
+  }
+  console.log(`  Hoisted ${hoisted} transitive dep(s) to top-level node_modules`);
+}
+
 // pnpm deploy does not apply publishConfig overrides for workspace deps.
 // @paperclipai/* packages have exports pointing to ./src/index.ts (dev) but
 // publishConfig.exports pointing to ./dist/index.js (production).
@@ -70,10 +110,17 @@ rmSync(uiDistDest, { recursive: true, force: true });
 // dereference so packager sees only plain files and directories.
 console.log('  Flattening symlinks (dereference)...');
 cpSync(pnpmDeployDir, serverFlatDir, { recursive: true, dereference: true });
-// .pnpm virtual store is now redundant — top-level entries are real dirs.
-rmSync(resolve(serverFlatDir, 'node_modules', '.pnpm'), { recursive: true, force: true });
 // Remove the intermediate pnpm deploy directory.
 rmSync(pnpmDeployDir, { recursive: true, force: true });
+
+// Hoist transitive deps from .pnpm virtual store to top-level node_modules
+// before removing the store.  Without this, packages like `postgres` (a dep
+// of @paperclipai/db, not a direct dep of server) are invisible to Node.js.
+console.log('  Hoisting transitive dependencies...');
+hoistTransitiveDeps(resolve(serverFlatDir, 'node_modules'));
+
+// .pnpm virtual store is now redundant — all deps are at the top level.
+rmSync(resolve(serverFlatDir, 'node_modules', '.pnpm'), { recursive: true, force: true });
 
 // Fix @paperclipai/* workspace package exports so they point to dist/.
 console.log('  Fixing @paperclipai/* publishConfig...');
