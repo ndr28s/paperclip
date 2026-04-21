@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execSync } from 'child_process';
-import { rmSync, mkdirSync, cpSync, existsSync } from 'fs';
+import { rmSync, mkdirSync, cpSync, existsSync, readFileSync, writeFileSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,6 +15,27 @@ const serverFlatDir = resolve(launcherDir, 'dist', 'server');
 function run(cmd, cwd, env) {
   console.log(`\n> ${cmd}`);
   execSync(cmd, { cwd, stdio: 'inherit', env: { ...process.env, ...env } });
+}
+
+// pnpm deploy does not apply publishConfig overrides for workspace deps.
+// @paperclipai/* packages have exports pointing to ./src/index.ts (dev) but
+// publishConfig.exports pointing to ./dist/index.js (production).
+// Without this fix the server crashes immediately trying to import .ts files
+// that don't exist in the deploy output (files: ["dist"] only).
+function applyPublishConfig(nodeModulesDir) {
+  const paperclipDir = resolve(nodeModulesDir, '@paperclipai');
+  if (!existsSync(paperclipDir)) return;
+  for (const pkgName of readdirSync(paperclipDir, { withFileTypes: true })) {
+    if (!pkgName.isDirectory()) continue;
+    const pkgJsonPath = resolve(paperclipDir, pkgName.name, 'package.json');
+    if (!existsSync(pkgJsonPath)) continue;
+    const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+    if (!pkg.publishConfig) continue;
+    Object.assign(pkg, pkg.publishConfig);
+    delete pkg.publishConfig;
+    writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+    console.log(`  Applied publishConfig for @paperclipai/${pkgName.name}`);
+  }
 }
 
 console.log('=== Building Paperclip standalone exe ===');
@@ -37,6 +58,10 @@ cpSync(pnpmDeployDir, serverFlatDir, { recursive: true, dereference: true });
 rmSync(resolve(serverFlatDir, 'node_modules', '.pnpm'), { recursive: true, force: true });
 // Remove the intermediate pnpm deploy directory.
 rmSync(pnpmDeployDir, { recursive: true, force: true });
+
+// Fix @paperclipai/* workspace package exports so they point to dist/.
+console.log('  Fixing @paperclipai/* publishConfig...');
+applyPublishConfig(resolve(serverFlatDir, 'node_modules'));
 
 console.log('\n[3/3] Packaging Electron app...');
 // Kill any running Paperclip process so electron-packager can overwrite the
