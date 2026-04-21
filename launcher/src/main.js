@@ -2,6 +2,7 @@
 
 const { app, Tray, Menu, nativeImage, shell, Notification, utilityProcess } = require('electron');
 const { spawn } = require('child_process');
+const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -16,6 +17,20 @@ function findRepoRoot(startDir) {
     dir = parent;
   }
   return null;
+}
+
+// The server reads its port from the config file (config.server.port), which
+// takes precedence over PAPERCLIP_LISTEN_PORT.  Read the same config so our
+// health-check and "open dashboard" menu item use the correct port.
+function resolvePort() {
+  const configPath =
+    process.env.PAPERCLIP_CONFIG ||
+    path.join(os.homedir(), '.paperclip', 'instances', 'default', 'config.json');
+  try {
+    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    if (cfg && cfg.server && cfg.server.port) return cfg.server.port;
+  } catch (_) {}
+  return parseInt(process.env.PAPERCLIP_LISTEN_PORT || '3100', 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -47,7 +62,7 @@ const ICON_RED_B64 =
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-const PORT = parseInt(process.env.PAPERCLIP_LISTEN_PORT || '3100', 10);
+const PORT = resolvePort();
 
 /** @type {Tray | null} */
 let tray = null;
