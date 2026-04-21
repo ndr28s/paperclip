@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-packager . Paperclip --platform=win32 --arch=x64 --out=dist --overwrite --electron-version=34.5.8 --extra-resource=dist/server",
-    "build:installer": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
     "build:standalone": "node scripts/build-standalone.mjs"
   },
   "dependencies": {
@@ -23,25 +23,20 @@
     "productName": "Paperclip",
     "asar": false,
     "win": {
-      "target": "nsis",
+      "target": [
+        { "target": "portable", "arch": ["x64"] }
+      ],
       "signingHashAlgorithms": null,
-      "icon": "src/icon.ico"
+      "sign": null
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+    "portable": {
+      "artifactName": "Paperclip-portable.exe"
     },
     "extraResources": [
       {
-        "from": "../",
-        "to": "app",
-        "filter": [
-          "server/dist/**",
-          "cli/dist/**",
-          "packages/**/dist/**",
-          ".paperclip/**"
-        ]
+        "from": "dist/server",
+        "to": "server",
+        "filter": ["**"]
       }
     ]
   }

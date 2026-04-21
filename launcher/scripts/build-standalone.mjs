@@ -9,12 +9,12 @@ const launcherDir = resolve(__dirname, '..');
 const repoRoot = resolve(launcherDir, '..');
 // pnpm deploy writes a virtual-store (symlink-heavy) structure here first.
 const pnpmDeployDir = resolve(launcherDir, 'dist', 'server-pnpm');
-// electron-packager reads from here — symlinks resolved to real files.
+// electron-builder reads from here — symlinks resolved to real files.
 const serverFlatDir = resolve(launcherDir, 'dist', 'server');
 
-function run(cmd, cwd) {
+function run(cmd, cwd, env) {
   console.log(`\n> ${cmd}`);
-  execSync(cmd, { cwd, stdio: 'inherit' });
+  execSync(cmd, { cwd, stdio: 'inherit', env: { ...process.env, ...env } });
 }
 
 console.log('=== Building Paperclip standalone exe ===');
@@ -28,7 +28,7 @@ rmSync(serverFlatDir, { recursive: true, force: true });
 mkdirSync(resolve(launcherDir, 'dist'), { recursive: true });
 run(`pnpm deploy --filter @paperclipai/server --prod "${pnpmDeployDir}"`, repoRoot);
 
-// pnpm creates node_modules with Windows symlinks; electron-packager can't
+// pnpm creates node_modules with Windows symlinks; electron-builder can't
 // recreate them in its temp dir without admin rights.  Copy everything with
 // dereference so packager sees only plain files and directories.
 console.log('  Flattening symlinks (dereference)...');
@@ -38,7 +38,11 @@ rmSync(resolve(serverFlatDir, 'node_modules', '.pnpm'), { recursive: true, force
 // Remove the intermediate pnpm deploy directory.
 rmSync(pnpmDeployDir, { recursive: true, force: true });
 
-console.log('\n[3/3] Packaging Electron app...');
-run('npm run build', launcherDir);
+console.log('\n[3/3] Packaging Electron app (portable exe)...');
+// CSC_IDENTITY_AUTO_DISCOVERY=false prevents electron-builder from trying
+// to download Windows code-signing tools (winCodeSign), which fails offline.
+run('npx electron-builder --win portable', launcherDir, {
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+});
 
-console.log('\n=== Done! Output: launcher/dist/Paperclip-win32-x64/Paperclip.exe ===');
+console.log('\n=== Done! Output: launcher/dist/Paperclip-portable.exe ===');
