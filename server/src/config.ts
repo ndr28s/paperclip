@@ -32,7 +32,7 @@ import {
 
 const PAPERCLIP_ENV_FILE_PATH = resolvePaperclipEnvPath();
 if (existsSync(PAPERCLIP_ENV_FILE_PATH)) {
-  loadDotenv({ path: PAPERCLIP_ENV_FILE_PATH, override: false, quiet: true });
+  loadDotenv({ path: PAPERCLIP_ENV_FILE_PATH, override: true, quiet: true });
 }
 
 const CWD_ENV_PATH = resolve(process.cwd(), ".env");
