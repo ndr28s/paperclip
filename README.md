@@ -177,19 +177,24 @@ This starts the API server at `http://localhost:3100`. An embedded PostgreSQL da
 
 터미널 없이 더블클릭으로 Paperclip을 실행할 수 있습니다. `launcher/` 패키지가 Electron 기반 Windows 트레이 런처를 제공합니다.
 
-**빌드 (설치 파일 생성)**
+**빌드 (서버 포함 단독 exe)**
+
+> 빌드 머신에는 Node.js 20+ 와 pnpm이 필요합니다. 배포 대상 머신에는 Node.js 나 pnpm이 없어도 됩니다.
 
 ```powershell
 cd launcher
 npm install
-npm run build
+npm run build:standalone
 ```
 
-`launcher/dist/Paperclip Setup.exe` 가 생성됩니다. 설치 후 실행하면:
+`launcher/dist/Paperclip-win32-x64/Paperclip.exe` 가 생성됩니다. 폴더째로 배포하거나 zip으로 묶어 배포하세요.
+
+실행하면:
 
 - 시스템 트레이에 Paperclip 아이콘이 표시됩니다 (노랑=시작 중, 초록=실행 중, 빨강=중지)
 - 트레이 메뉴에서 **대시보드 열기 / 재시작 / 종료** 를 선택할 수 있습니다
 - 서버가 백그라운드에서 자동 실행되며 `http://localhost:3100` 에서 접속합니다
+- 데이터는 `~/.paperclip/` 에 저장됩니다 (exe 위치와 무관)
 
 **개발 모드로 런처 실행**
 

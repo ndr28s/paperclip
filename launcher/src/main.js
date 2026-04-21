@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, Tray, Menu, nativeImage, shell, Notification } = require('electron');
+const { app, Tray, Menu, nativeImage, shell, Notification, utilityProcess } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -51,11 +51,13 @@ const PORT = parseInt(process.env.PAPERCLIP_LISTEN_PORT || '3100', 10);
 
 /** @type {Tray | null} */
 let tray = null;
-/** @type {import('child_process').ChildProcess | null} */
+/** @type {import('child_process').ChildProcess | import('electron').UtilityProcess | null} */
 let serverProcess = null;
 let serverReady = false;
 /** Set to true when the user explicitly asked to stop (Quit / Restart). */
 let userInitiatedStop = false;
+/** True when serverProcess is a utilityProcess (packaged mode). */
+let serverIsUtilityProcess = false;
 
 // ---------------------------------------------------------------------------
 // Single-instance lock
@@ -153,21 +155,55 @@ function updateMenu(status) {
 // Server spawn
 // ---------------------------------------------------------------------------
 function spawnServer() {
-  // Find repo root starting from the exe directory (works for both dev and packaged).
-  const repoRoot = findRepoRoot(path.dirname(app.getPath('exe')));
+  if (app.isPackaged) {
+    // Packaged mode: use bundled server via utilityProcess.fork()
+    const serverEntry = path.join(process.resourcesPath, 'server', 'dist', 'index.js');
+    const serverCwd = path.join(process.resourcesPath, 'server');
 
-  if (!repoRoot) {
-    showNotification('Paperclip 오류', 'paperclip 저장소를 찾을 수 없습니다. launcher/ 폴더가 저장소 안에 있는지 확인하세요.');
-    updateTrayStatus('stopped');
-    return null;
+    serverIsUtilityProcess = true;
+    const proc = utilityProcess.fork(serverEntry, [], {
+      env: {
+        ...process.env,
+        PAPERCLIP_LISTEN_PORT: String(PORT),
+        NODE_ENV: 'production',
+        PAPERCLIP_MIGRATION_AUTO_APPLY: 'true',
+        PAPERCLIP_MIGRATION_PROMPT: 'never',
+      },
+      stdio: 'pipe',
+      serviceName: 'paperclip-server',
+      cwd: serverCwd,
+    });
+
+    proc.on('spawn', () => {
+      console.log(`[launcher] utility process spawned with pid ${proc.pid}`);
+    });
+
+    if (proc.stdout) {
+      proc.stdout.on('data', (d) => console.log('[server]', d.toString().trim()));
+    }
+    if (proc.stderr) {
+      proc.stderr.on('data', (d) => console.error('[server]', d.toString().trim()));
+    }
+
+    return proc;
+  } else {
+    // Dev mode: find repo root and run pnpm dev
+    const repoRoot = findRepoRoot(path.dirname(app.getPath('exe')));
+
+    if (!repoRoot) {
+      showNotification('Paperclip 오류', 'paperclip 저장소를 찾을 수 없습니다. launcher/ 폴더가 저장소 안에 있는지 확인하세요.');
+      updateTrayStatus('stopped');
+      return null;
+    }
+
+    serverIsUtilityProcess = false;
+    return spawn('pnpm', ['dev'], {
+      cwd: repoRoot,
+      shell: true,
+      windowsHide: true,
+      env: { ...process.env, PAPERCLIP_LISTEN_PORT: String(PORT) },
+    });
   }
-
-  return spawn('pnpm', ['dev'], {
-    cwd: repoRoot,
-    shell: true,
-    windowsHide: true,
-    env: { ...process.env, PAPERCLIP_LISTEN_PORT: String(PORT) },
-  });
 }
 
 function startServer() {
@@ -178,22 +214,25 @@ function startServer() {
   serverProcess = spawnServer();
   if (!serverProcess) return;
 
-  serverProcess.on('error', (err) => {
-    console.error('[launcher] Failed to start server process:', err);
-    updateTrayStatus('stopped');
-    if (!userInitiatedStop) {
-      showNotification('Paperclip 오류', `서버를 시작할 수 없습니다: ${err.message}`);
-    }
-  });
+  if (!serverIsUtilityProcess) {
+    // ChildProcess has an 'error' event; utilityProcess does not.
+    serverProcess.on('error', (err) => {
+      console.error('[launcher] Failed to start server process:', err);
+      updateTrayStatus('stopped');
+      if (!userInitiatedStop) {
+        showNotification('Paperclip 오류', `서버를 시작할 수 없습니다: ${err.message}`);
+      }
+    });
+  }
 
-  serverProcess.on('exit', (code, signal) => {
+  serverProcess.on('exit', (code) => {
     serverReady = false;
     const wasUserStop = userInitiatedStop;
     serverProcess = null;
 
     if (!wasUserStop) {
       // Unexpected exit.
-      console.warn(`[launcher] Server exited unexpectedly (code=${code}, signal=${signal})`);
+      console.warn(`[launcher] Server exited unexpectedly (code=${code})`);
       updateTrayStatus('stopped');
       showNotification('Paperclip 중지됨', '서버가 예기치 않게 종료되었습니다.');
     }
@@ -213,24 +252,33 @@ function stopServer() {
     userInitiatedStop = true;
 
     const proc = serverProcess;
+    const isUtility = serverIsUtilityProcess;
     serverProcess = null;
 
-    // Give the process up to 5 seconds to exit cleanly before killing it.
-    const forceKill = setTimeout(() => {
-      try { proc.kill('SIGKILL'); } catch (_) {}
-    }, 5000);
-
     proc.on('exit', () => {
-      clearTimeout(forceKill);
       resolve();
     });
 
-    try {
-      proc.kill('SIGTERM');
-    } catch (err) {
-      console.error('[launcher] Error sending SIGTERM:', err);
-      clearTimeout(forceKill);
-      resolve();
+    if (isUtility) {
+      // utilityProcess.kill() terminates immediately (no SIGTERM support on Windows).
+      try { proc.kill(); } catch (_) {}
+    } else {
+      // Give the ChildProcess up to 5 seconds to exit cleanly before killing it.
+      const forceKill = setTimeout(() => {
+        try { proc.kill('SIGKILL'); } catch (_) {}
+      }, 5000);
+
+      proc.once('exit', () => {
+        clearTimeout(forceKill);
+      });
+
+      try {
+        proc.kill('SIGTERM');
+      } catch (err) {
+        console.error('[launcher] Error sending SIGTERM:', err);
+        clearTimeout(forceKill);
+        resolve();
+      }
     }
   });
 }

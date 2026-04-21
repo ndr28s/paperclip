@@ -6,8 +6,9 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . Paperclip --platform=win32 --arch=x64 --out=dist --overwrite --electron-version=34.5.8",
-    "build:installer": "electron-builder --win"
+    "build": "electron-packager . Paperclip --platform=win32 --arch=x64 --out=dist --overwrite --electron-version=34.5.8 --extra-resource=dist/server",
+    "build:installer": "electron-builder --win",
+    "build:standalone": "node scripts/build-standalone.mjs"
   },
   "dependencies": {
     "open": "^10.1.0"
