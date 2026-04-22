@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { callAuxLLM, getAuxBackendInfo } from "../lib/auxiliary-client.js";
+import { callAuxLLM, getAuxBackendInfo } from "./auxiliary-client.js";
 
 // ── env helpers ──────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockFetchOk(content: string, model = "test-model") {
+function mockFetchOk(content: string) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
@@ -46,7 +46,7 @@ function mockFetchOk(content: string, model = "test-model") {
       json: () =>
         Promise.resolve({
           choices: [{ message: { content } }],
-          model,
+          model: "test-model",
         }),
     }),
   );
@@ -128,7 +128,6 @@ describe("getAuxBackendInfo", () => {
 
   it("returns null for explicit provider when key is missing", () => {
     process.env.PAPERCLIP_AUX_PROVIDER = "openrouter";
-    // No OPENROUTER_API_KEY set
     expect(getAuxBackendInfo()).toBeNull();
   });
 });

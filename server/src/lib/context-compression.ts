@@ -14,8 +14,8 @@
  * and inserting a placeholder, so the service is always usable.
  */
 
-import type { AuxMessage } from "./auxiliary-client.js";
-import { callAuxLLM } from "./auxiliary-client.js";
+import type { AuxMessage } from "@paperclipai/adapter-utils";
+import { callAuxLLM } from "@paperclipai/adapter-utils";
 
 export type CompressionRole = "system" | "user" | "assistant" | "tool";
 
