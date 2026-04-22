@@ -25,14 +25,14 @@ function normalizeLabel(text: string): string {
 function detailText(window: QuotaWindow): string | null {
   if (typeof window.detail === "string" && window.detail.trim().length > 0) return window.detail.trim();
   if (window.resetsAt) {
-    const formatted = new Date(window.resetsAt).toLocaleString(undefined, {
-      month: "short",
+    const formatted = new Date(window.resetsAt).toLocaleString("ko-KR", {
+      month: "long",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
       timeZoneName: "short",
     });
-    return `Resets ${formatted}`;
+    return `${formatted} 초기화`;
   }
   return null;
 }

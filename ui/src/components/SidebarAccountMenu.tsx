@@ -203,7 +203,9 @@ export function SidebarAccountMenu({
                 description={t('account.languageDesc')}
                 icon={Globe}
                 onClick={() => {
-                  i18n.changeLanguage(i18n.language === 'ko' ? 'en' : 'ko');
+                  const newLang = i18n.language === 'ko' ? 'en' : 'ko';
+                  localStorage.setItem('paperclip-language', newLang);
+                  i18n.changeLanguage(newLang);
                   setOpen(false);
                 }}
               />

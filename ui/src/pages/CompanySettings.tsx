@@ -439,7 +439,7 @@ export function CompanySettings() {
             </div>
             {selectedCompany.feedbackDataSharingConsentAt ? (
               <div>
-                Enabled {new Date(selectedCompany.feedbackDataSharingConsentAt).toLocaleString()}
+                {t('common.enabled')} {new Date(selectedCompany.feedbackDataSharingConsentAt).toLocaleString("ko-KR")}
                 {selectedCompany.feedbackDataSharingConsentByUserId
                   ? ` by ${selectedCompany.feedbackDataSharingConsentByUserId}`
                   : ""}

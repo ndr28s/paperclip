@@ -70,7 +70,7 @@ function autoResizeTextarea(element: HTMLTextAreaElement | null) {
 
 function formatLastRunTimestamp(value: Date | string | null | undefined) {
   if (!value) return "Never";
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString("ko-KR");
 }
 
 function nextRoutineStatus(currentStatus: string, enabled: boolean) {

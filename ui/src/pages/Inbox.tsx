@@ -723,8 +723,8 @@ export function Inbox() {
   });
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Inbox" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: t('nav.inbox') }]);
+  }, [setBreadcrumbs, t]);
 
   useEffect(() => {
     saveLastInboxTab(tab);

@@ -171,8 +171,8 @@ export function Costs() {
   } = useDateRange();
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Costs" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: t('costs.title') }]);
+  }, [setBreadcrumbs, t]);
 
   const [today, setToday] = useState(() => new Date().toDateString());
   const todayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -40,16 +40,15 @@ import { MarkdownEditor, type MarkdownEditorRef, type MentionOption } from "./Ma
 import { StatusBadge } from "./StatusBadge";
 import { ChoosePathButton } from "./PathInstructionsModal";
 
-const projectStatuses = [
-  { value: "backlog", label: "Backlog" },
-  { value: "planned", label: "Planned" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-];
-
 export function NewProjectDialog() {
   const { t } = useTranslation();
+  const projectStatuses = [
+    { value: "backlog", label: t('status.backlog') },
+    { value: "planned", label: t('status.planned') },
+    { value: "in_progress", label: t('status.in_progress') },
+    { value: "completed", label: t('status.completed') },
+    { value: "cancelled", label: t('status.cancelled') },
+  ];
   const { newProjectOpen, closeNewProject } = useDialog();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();

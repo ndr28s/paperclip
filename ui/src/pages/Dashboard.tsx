@@ -53,8 +53,8 @@ export function Dashboard() {
   });
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Dashboard" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: t('nav.dashboard') }]);
+  }, [setBreadcrumbs, t]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.dashboard(selectedCompanyId!),
@@ -233,10 +233,10 @@ export function Dashboard() {
                 <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
                 <div>
                   <p className="text-sm font-medium text-red-50">
-                    {data.budgets.activeIncidents} active budget incident{data.budgets.activeIncidents === 1 ? "" : "s"}
+                    {t('dashboard.activeBudgetIncident', { count: data.budgets.activeIncidents })}
                   </p>
                   <p className="text-xs text-red-100/70">
-                    {data.budgets.pausedAgents} agents paused · {data.budgets.pausedProjects} projects paused · {data.budgets.pendingApprovals} pending budget approvals
+                    {t('dashboard.agentsPaused', { count: data.budgets.pausedAgents })} · {t('dashboard.projectsPaused', { count: data.budgets.pausedProjects })} · {t('dashboard.pendingBudgetApprovals', { count: data.budgets.pendingApprovals })}
                   </p>
                 </div>
               </div>
@@ -254,9 +254,9 @@ export function Dashboard() {
               to="/agents"
               description={
                 <span>
-                  {data.agents.running} running{", "}
-                  {data.agents.paused} paused{", "}
-                  {data.agents.error} errors
+                  {data.agents.running} {t('dashboard.running')}{", "}
+                  {data.agents.paused} {t('dashboard.paused')}{", "}
+                  {data.agents.error} {t('dashboard.errors')}
                 </span>
               }
             />
@@ -267,8 +267,8 @@ export function Dashboard() {
               to="/issues"
               description={
                 <span>
-                  {data.tasks.open} open{", "}
-                  {data.tasks.blocked} blocked
+                  {data.tasks.open} {t('dashboard.open')}{", "}
+                  {data.tasks.blocked} {t('dashboard.blocked')}
                 </span>
               }
             />
@@ -280,8 +280,8 @@ export function Dashboard() {
               description={
                 <span>
                   {data.costs.monthBudgetCents > 0
-                    ? `${data.costs.monthUtilizationPercent}% of ${formatCents(data.costs.monthBudgetCents)} budget`
-                    : "Unlimited budget"}
+                    ? t('dashboard.budgetPercent', { percent: data.costs.monthUtilizationPercent, budget: formatCents(data.costs.monthBudgetCents) })
+                    : t('dashboard.unlimitedBudget')}
                 </span>
               }
             />
@@ -293,8 +293,8 @@ export function Dashboard() {
               description={
                 <span>
                   {data.budgets.pendingApprovals > 0
-                    ? `${data.budgets.pendingApprovals} budget overrides awaiting board review`
-                    : "Awaiting board review"}
+                    ? t('dashboard.budgetOverridesAwaiting', { count: data.budgets.pendingApprovals })
+                    : t('dashboard.awaitingBoardReview')}
                 </span>
               }
             />

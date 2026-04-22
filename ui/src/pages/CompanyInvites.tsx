@@ -141,7 +141,7 @@ export function CompanyInvites() {
     mutationFn: (inviteId: string) => accessApi.revokeInvite(inviteId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: inviteHistoryQueryKey });
-      pushToast({ title: "Invite revoked", tone: "success" });
+      pushToast({ title: t('companyInvites.revokeSuccess'), tone: "success" });
     },
     onError: (error) => {
       pushToast({
@@ -322,7 +322,7 @@ export function CompanyInvites() {
                         ) : null}
                       </td>
                       <td className="px-5 py-3 align-top text-muted-foreground">
-                        {new Date(invite.createdAt).toLocaleString()}
+                        {new Date(invite.createdAt).toLocaleString("ko-KR")}
                       </td>
                       <td className="px-5 py-3 align-top">
                         {invite.relatedJoinRequestId ? (

@@ -367,7 +367,7 @@ export function ProviderQuotaCard({
                             </p>
                           ) : qw.resetsAt ? (
                             <p className="text-xs text-muted-foreground">
-                              resets {new Date(qw.resetsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                              {new Date(qw.resetsAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 초기화
                             </p>
                           ) : null}
                         </div>

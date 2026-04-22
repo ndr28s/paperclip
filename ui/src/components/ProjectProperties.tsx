@@ -23,13 +23,6 @@ import { DraftInput } from "./agent-config-primitives";
 import { InlineEditor } from "./InlineEditor";
 import { EnvVarEditor } from "./EnvVarEditor";
 
-const PROJECT_STATUSES = [
-  { value: "backlog", label: "Backlog" },
-  { value: "planned", label: "Planned" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-];
 
 interface ProjectPropertiesProps {
   project: Project;
@@ -56,11 +49,12 @@ export type ProjectConfigFieldKey =
   | "execution_workspace_teardown_command";
 
 function SaveIndicator({ state }: { state: ProjectFieldSaveState }) {
+  const { t } = useTranslation();
   if (state === "saving") {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Saving
+        {t('common.saving')}
       </span>
     );
   }
@@ -68,7 +62,7 @@ function SaveIndicator({ state }: { state: ProjectFieldSaveState }) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
         <Check className="h-3 w-3" />
-        Saved
+        {t('common.saved')}
       </span>
     );
   }
@@ -76,7 +70,7 @@ function SaveIndicator({ state }: { state: ProjectFieldSaveState }) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-destructive">
         <AlertCircle className="h-3 w-3" />
-        Failed
+        {t('status.failed')}
       </span>
     );
   }
@@ -120,8 +114,16 @@ function PropertyRow({
 }
 
 function ProjectStatusPicker({ status, onChange }: { status: string; onChange: (status: string) => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const colorClass = statusBadge[status] ?? statusBadgeDefault;
+  const projectStatuses = [
+    { value: "backlog", label: t('status.backlog') },
+    { value: "planned", label: t('status.planned') },
+    { value: "in_progress", label: t('status.in_progress') },
+    { value: "completed", label: t('status.completed') },
+    { value: "cancelled", label: t('status.cancelled') },
+  ];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -132,11 +134,11 @@ function ProjectStatusPicker({ status, onChange }: { status: string; onChange: (
             colorClass,
           )}
         >
-          {status.replace("_", " ")}
+          {t(`status.${status}`, { defaultValue: status.replace(/_/g, ' ') })}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-40 p-1" align="start">
-        {PROJECT_STATUSES.map((s) => (
+        {projectStatuses.map((s) => (
           <Button
             key={s.value}
             variant="ghost"
@@ -164,26 +166,24 @@ function ArchiveDangerZone({
   onArchive: (archived: boolean) => void;
   archivePending?: boolean;
 }) {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const isArchive = !project.archivedAt;
-  const action = isArchive ? "Archive" : "Unarchive";
 
   return (
     <div className="space-y-3 rounded-md border border-destructive/40 bg-destructive/5 px-4 py-4">
       <p className="text-sm text-muted-foreground">
-        {isArchive
-          ? "Archive this project to hide it from the sidebar and project selectors."
-          : "Unarchive this project to restore it in the sidebar and project selectors."}
+        {isArchive ? t('projectProperties.archiveDesc') : t('projectProperties.unarchiveDesc')}
       </p>
       {archivePending ? (
         <Button size="sm" variant="destructive" disabled>
           <Loader2 className="h-3 w-3 animate-spin mr-1" />
-          {isArchive ? "Archiving..." : "Unarchiving..."}
+          {isArchive ? t('projectProperties.archiving') : t('projectProperties.unarchiving')}
         </Button>
       ) : confirming ? (
         <div className="flex items-center gap-2">
           <span className="text-sm text-destructive font-medium">
-            {action} &ldquo;{project.name}&rdquo;?
+            {isArchive ? t('projectProperties.archiveProject') : t('projectProperties.unarchiveProject')} &ldquo;{project.name}&rdquo;?
           </span>
           <Button
             size="sm"
@@ -193,14 +193,14 @@ function ArchiveDangerZone({
               onArchive(isArchive);
             }}
           >
-            Confirm
+            {t('common.confirm')}
           </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={() => setConfirming(false)}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       ) : (
@@ -210,9 +210,9 @@ function ArchiveDangerZone({
           onClick={() => setConfirming(true)}
         >
           {isArchive ? (
-            <><Archive className="h-3 w-3 mr-1" />{action} project</>
+            <><Archive className="h-3 w-3 mr-1" />{t('projectProperties.archiveProject')}</>
           ) : (
-            <><ArchiveRestore className="h-3 w-3 mr-1" />{action} project</>
+            <><ArchiveRestore className="h-3 w-3 mr-1" />{t('projectProperties.unarchiveProject')}</>
           )}
         </Button>
       )}
@@ -492,7 +492,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
   return (
     <div>
       <div className="space-y-1 pb-4">
-        <PropertyRow label={<FieldLabel label="Name" state={fieldState("name")} />}>
+        <PropertyRow label={<FieldLabel label={t('projectProperties.name')} state={fieldState("name")} />}>
           {onUpdate || onFieldUpdate ? (
             <DraftInput
               value={project.name}
@@ -506,7 +506,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
           )}
         </PropertyRow>
         <PropertyRow
-          label={<FieldLabel label="Description" state={fieldState("description")} />}
+          label={<FieldLabel label={t('projectProperties.description')} state={fieldState("description")} />}
           alignStart
           valueClassName="space-y-0.5"
         >
@@ -526,7 +526,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
             </p>
           )}
         </PropertyRow>
-        <PropertyRow label={<FieldLabel label="Status" state={fieldState("status")} />}>
+        <PropertyRow label={<FieldLabel label={t('projectProperties.status')} state={fieldState("status")} />}>
           {onUpdate || onFieldUpdate ? (
             <ProjectStatusPicker
               status={project.status}
@@ -537,12 +537,12 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
           )}
         </PropertyRow>
         {project.leadAgentId && (
-          <PropertyRow label="Lead">
+          <PropertyRow label={t('projectProperties.lead')}>
             <span className="text-sm font-mono">{project.leadAgentId.slice(0, 8)}</span>
           </PropertyRow>
         )}
         <PropertyRow
-          label={<FieldLabel label="Goals" state={fieldState("goals")} />}
+          label={<FieldLabel label={t('projectProperties.goals')} state={fieldState("goals")} />}
           alignStart
           valueClassName="space-y-2"
         >
@@ -604,7 +604,7 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
           )}
         </PropertyRow>
         <PropertyRow
-          label={<FieldLabel label="Env" state={fieldState("env")} />}
+          label={<FieldLabel label={t('projectProperties.env')} state={fieldState("env")} />}
           alignStart
           valueClassName="space-y-2"
         >
@@ -623,14 +623,14 @@ export function ProjectProperties({ project, onUpdate, onFieldUpdate, getFieldSa
             </p>
           </div>
         </PropertyRow>
-        <PropertyRow label={<FieldLabel label="Created" state="idle" />}>
+        <PropertyRow label={<FieldLabel label={t('projectProperties.created')} state="idle" />}>
           <span className="text-sm">{formatDate(project.createdAt)}</span>
         </PropertyRow>
-        <PropertyRow label={<FieldLabel label="Updated" state="idle" />}>
+        <PropertyRow label={<FieldLabel label={t('projectProperties.updated')} state="idle" />}>
           <span className="text-sm">{formatDate(project.updatedAt)}</span>
         </PropertyRow>
         {project.targetDate && (
-          <PropertyRow label={<FieldLabel label="Target Date" state="idle" />}>
+          <PropertyRow label={<FieldLabel label={t('projectProperties.targetDate')} state="idle" />}>
             <span className="text-sm">{formatDate(project.targetDate)}</span>
           </PropertyRow>
         )}

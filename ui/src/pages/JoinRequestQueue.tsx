@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPlus2 } from "lucide-react";
 import { accessApi } from "@/api/access";
@@ -11,6 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function JoinRequestQueue() {
+  const { t } = useTranslation();
   const { selectedCompany, selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const { pushToast } = useToast();
@@ -43,7 +45,7 @@ export function JoinRequestQueue() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.access.joinRequests(selectedCompanyId!, `${status}:${requestType}`) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.access.companyMembers(selectedCompanyId!) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.access.companyUserDirectory(selectedCompanyId!) });
-      pushToast({ title: "Join request approved", tone: "success" });
+      pushToast({ title: t('companyInvites.approveSuccess'), tone: "success" });
     },
   });
 
@@ -51,7 +53,7 @@ export function JoinRequestQueue() {
     mutationFn: (requestId: string) => accessApi.rejectJoinRequest(selectedCompanyId!, requestId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.access.joinRequests(selectedCompanyId!, `${status}:${requestType}`) });
-      pushToast({ title: "Join request rejected", tone: "success" });
+      pushToast({ title: t('companyInvites.rejectSuccess'), tone: "success" });
     },
   });
 
@@ -180,7 +182,7 @@ export function JoinRequestQueue() {
                 </div>
                 <div className="rounded-lg border border-border bg-background px-3 py-2">
                   <div className="text-xs font-medium uppercase tracking-wide">Request details</div>
-                  <div className="mt-2">Submitted {new Date(request.createdAt).toLocaleString()}</div>
+                  <div className="mt-2">{t('common.submitted')} {new Date(request.createdAt).toLocaleString("ko-KR")}</div>
                   <div>Source IP {request.requestIp}</div>
                   {request.requestType === "agent" && request.capabilities ? <div>{request.capabilities}</div> : null}
                 </div>

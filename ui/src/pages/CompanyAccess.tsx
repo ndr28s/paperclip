@@ -245,7 +245,7 @@ export function CompanyAccess() {
                       ? `${request.invite.allowedJoinTypes} join invite${request.invite.humanRole ? ` • default role ${request.invite.humanRole}` : ""}`
                       : "Invite metadata unavailable"
                   }
-                  detail={`Submitted ${new Date(request.createdAt).toLocaleString()}`}
+                  detail={`${t('common.submitted')} ${new Date(request.createdAt).toLocaleString("ko-KR")}`}
                   approveLabel="Approve human"
                   rejectLabel="Reject human"
                   disabled={joinRequestActionPending}

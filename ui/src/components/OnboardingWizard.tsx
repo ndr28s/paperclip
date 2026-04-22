@@ -1302,7 +1302,7 @@ function AdapterEnvironmentResult({
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium">{statusLabel}</span>
         <span className="opacity-80">
-          {new Date(result.testedAt).toLocaleTimeString()}
+          {new Date(result.testedAt).toLocaleTimeString("ko-KR")}
         </span>
       </div>
       <div className="mt-1.5 space-y-1">

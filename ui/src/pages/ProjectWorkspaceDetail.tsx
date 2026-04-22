@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "@/lib/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isUuidLike, type ProjectWorkspace } from "@paperclipai/shared";
@@ -215,6 +216,7 @@ export function ProjectWorkspaceDetail() {
     projectId: string;
     workspaceId: string;
   }>();
+  const { t } = useTranslation();
   const { companies, selectedCompanyId, setSelectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
@@ -613,7 +615,7 @@ export function ProjectWorkspaceDetail() {
               ) : "None"}
             </DetailRow>
             <DetailRow label="Default ref">{workspace.defaultRef ?? "None"}</DetailRow>
-            <DetailRow label="Updated">{new Date(workspace.updatedAt).toLocaleString()}</DetailRow>
+            <DetailRow label={t('common.updated')}>{new Date(workspace.updatedAt).toLocaleString("ko-KR")}</DetailRow>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-5">

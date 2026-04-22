@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Shield, ShieldCheck } from "lucide-react";
 import { accessApi } from "@/api/access";
@@ -11,6 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function InstanceAccess() {
+  const { t } = useTranslation();
   const { companies } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const { pushToast } = useToast();
@@ -21,8 +23,8 @@ export function InstanceAccess() {
 
   useEffect(() => {
     setBreadcrumbs([
-      { label: "Instance Settings", href: "/instance/settings/general" },
-      { label: "Access" },
+      { label: t('instanceSettings.title'), href: "/instance/settings/general" },
+      { label: t('instanceSidebar.access') },
     ]);
   }, [setBreadcrumbs]);
 
@@ -60,7 +62,7 @@ export function InstanceAccess() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.access.userCompanyAccess(selectedUserId!) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.access.adminUsers(search) });
-      pushToast({ title: "Company access updated", tone: "success" });
+      pushToast({ title: t('companyAccess.accessUpdated'), tone: "success" });
     },
   });
 
@@ -75,7 +77,7 @@ export function InstanceAccess() {
       if (selectedUserId) {
         await queryClient.invalidateQueries({ queryKey: queryKeys.access.userCompanyAccess(selectedUserId) });
       }
-      pushToast({ title: "Instance role updated", tone: "success" });
+      pushToast({ title: t('companyAccess.roleUpdated'), tone: "success" });
     },
   });
 
@@ -230,7 +232,7 @@ export function InstanceAccess() {
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(membership.updatedAt).toLocaleDateString()}
+                        {new Date(membership.updatedAt).toLocaleDateString("ko-KR")}
                       </div>
                     </div>
                   ))}

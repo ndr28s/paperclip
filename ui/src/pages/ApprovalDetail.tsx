@@ -342,7 +342,7 @@ export function ApprovalDetail() {
                   <Identity name="Board" size="sm" />
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {new Date(comment.createdAt).toLocaleString()}
+                  {new Date(comment.createdAt).toLocaleString("ko-KR")}
                 </span>
               </div>
               <MarkdownBody className="text-sm">{comment.body}</MarkdownBody>

@@ -31,8 +31,8 @@ export function Activity() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Activity" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: t('nav.activity') }]);
+  }, [setBreadcrumbs, t]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.activity(selectedCompanyId!),

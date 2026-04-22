@@ -82,8 +82,8 @@ export function Issues() {
   );
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Issues" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: t('issues.title') }]);
+  }, [setBreadcrumbs, t]);
 
   const { data: issues, isLoading, error } = useQuery({
     queryKey: [

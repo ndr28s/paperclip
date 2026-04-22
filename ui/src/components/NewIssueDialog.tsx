@@ -228,26 +228,7 @@ function formatFileSize(file: File) {
   return `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const statuses = [
-  { value: "backlog", label: "Backlog", color: issueStatusText.backlog ?? issueStatusTextDefault },
-  { value: "todo", label: "Todo", color: issueStatusText.todo ?? issueStatusTextDefault },
-  { value: "in_progress", label: "In Progress", color: issueStatusText.in_progress ?? issueStatusTextDefault },
-  { value: "in_review", label: "In Review", color: issueStatusText.in_review ?? issueStatusTextDefault },
-  { value: "done", label: "Done", color: issueStatusText.done ?? issueStatusTextDefault },
-];
-
-const priorities = [
-  { value: "critical", label: "Critical", icon: AlertTriangle, color: priorityColor.critical ?? priorityColorDefault },
-  { value: "high", label: "High", icon: ArrowUp, color: priorityColor.high ?? priorityColorDefault },
-  { value: "medium", label: "Medium", icon: Minus, color: priorityColor.medium ?? priorityColorDefault },
-  { value: "low", label: "Low", icon: ArrowDown, color: priorityColor.low ?? priorityColorDefault },
-];
-
-const EXECUTION_WORKSPACE_MODES = [
-  { value: "shared_workspace", label: "Project default" },
-  { value: "isolated_workspace", label: "New isolated workspace" },
-  { value: "reuse_existing", label: "Reuse existing workspace" },
-] as const;
+const EXECUTION_WORKSPACE_MODE_VALUES = ["shared_workspace", "isolated_workspace", "reuse_existing"] as const;
 
 function defaultProjectWorkspaceIdForProject(project: { workspaces?: Array<{ id: string; isPrimary: boolean }>; executionWorkspacePolicy?: { defaultProjectWorkspaceId?: string | null } | null } | null | undefined) {
   if (!project) return "";
@@ -281,6 +262,24 @@ function issueExecutionWorkspaceModeForExistingWorkspace(mode: string | null | u
 
 export function NewIssueDialog() {
   const { t } = useTranslation();
+  const statuses = [
+    { value: "backlog", label: t('issues.status.backlog'), color: issueStatusText.backlog ?? issueStatusTextDefault },
+    { value: "todo", label: t('issues.status.todo'), color: issueStatusText.todo ?? issueStatusTextDefault },
+    { value: "in_progress", label: t('issues.status.inProgress'), color: issueStatusText.in_progress ?? issueStatusTextDefault },
+    { value: "in_review", label: t('issues.status.inReview'), color: issueStatusText.in_review ?? issueStatusTextDefault },
+    { value: "done", label: t('issues.status.done'), color: issueStatusText.done ?? issueStatusTextDefault },
+  ];
+  const priorities = [
+    { value: "critical", label: t('issues.priority.critical'), icon: AlertTriangle, color: priorityColor.critical ?? priorityColorDefault },
+    { value: "high", label: t('issues.priority.high'), icon: ArrowUp, color: priorityColor.high ?? priorityColorDefault },
+    { value: "medium", label: t('issues.priority.medium'), icon: Minus, color: priorityColor.medium ?? priorityColorDefault },
+    { value: "low", label: t('issues.priority.low'), icon: ArrowDown, color: priorityColor.low ?? priorityColorDefault },
+  ];
+  const executionWorkspaceModes = [
+    { value: "shared_workspace", label: t('newIssue.workspaceProjectDefault') },
+    { value: "isolated_workspace", label: t('newIssue.workspaceIsolated') },
+    { value: "reuse_existing", label: t('newIssue.workspaceReuse') },
+  ] satisfies { value: typeof EXECUTION_WORKSPACE_MODE_VALUES[number]; label: string }[];
   const { newIssueOpen, newIssueDefaults, closeNewIssue } = useDialog();
   const { companies, selectedCompanyId, selectedCompany } = useCompany();
   const queryClient = useQueryClient();
@@ -1354,7 +1353,7 @@ export function NewIssueDialog() {
                   }
                 }}
               >
-                {EXECUTION_WORKSPACE_MODES.map((option) => (
+                {executionWorkspaceModes.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
