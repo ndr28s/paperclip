@@ -53,6 +53,7 @@ import { useCompany } from "./context/CompanyContext";
 import { useDialog } from "./context/DialogContext";
 import { loadLastInboxTab } from "./lib/inbox";
 import { shouldRedirectCompanylessRouteToOnboarding } from "./lib/onboarding-route";
+import { PageSkeleton } from "./components/PageSkeleton";
 
 function boardRoutes() {
   return (
@@ -182,7 +183,7 @@ function CompanyRootRedirect() {
   const location = useLocation();
 
   if (loading) {
-    return <div className="mx-auto max-w-xl py-10 text-sm text-muted-foreground">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   const targetCompany = selectedCompany ?? companies[0] ?? null;
@@ -206,7 +207,7 @@ function UnprefixedBoardRedirect() {
   const { companies, selectedCompany, loading } = useCompany();
 
   if (loading) {
-    return <div className="mx-auto max-w-xl py-10 text-sm text-muted-foreground">Loading...</div>;
+    return <PageSkeleton />;
   }
 
   const targetCompany = selectedCompany ?? companies[0] ?? null;

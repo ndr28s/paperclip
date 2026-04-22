@@ -92,6 +92,7 @@ import {
   Copy,
   EyeOff,
   Hexagon,
+  AlertCircle,
   MessageSquare,
   MoreHorizontal,
   MoreVertical,
@@ -2103,7 +2104,14 @@ export function IssueDetail() {
   }, [interruptQueuedComment]);
 
   if (isLoading) return <IssueDetailLoadingState headerSeed={issueHeaderSeed} />;
-  if (error) return <p className="text-sm text-destructive">{error.message}</p>;
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+        <AlertCircle className="h-8 w-8 text-destructive/60" />
+        <p className="text-sm font-medium text-destructive">{error.message}</p>
+      </div>
+    );
+  }
   if (!issue) return null;
 
   // Ancestors are returned oldest-first from the server (root at end, immediate parent at start)
