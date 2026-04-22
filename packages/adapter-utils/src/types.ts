@@ -281,6 +281,8 @@ export interface ConfigFieldSchema {
   hint?: string;
   required?: boolean;
   group?: string;
+  /** Show this field only when another field equals a specific value */
+  conditionalOn?: { key: string; value: unknown };
   /** Optional metadata — not rendered, but available to custom UI logic */
   meta?: Record<string, unknown>;
 }

@@ -1,4 +1,4 @@
-import type { ServerAdapterModule, AdapterConfigSchema } from "./types.js";
+import type { ServerAdapterModule, AdapterConfigSchema, AdapterExecutionContext, AdapterEnvironmentTestContext, AdapterEnvironmentTestResult, AdapterExecutionResult, AdapterEnvironmentCheck } from "./types.js";
 import { getAdapterSessionManagement } from "@paperclipai/adapter-utils";
 import {
   execute as claudeExecute,
@@ -203,11 +203,59 @@ const piLocalAdapter: ServerAdapterModule = {
 const HERMES_VALID_PROVIDERS = [
   "auto", "openrouter", "nous", "openai-codex", "copilot", "copilot-acp",
   "anthropic", "huggingface", "zai", "kimi-coding", "minimax", "minimax-cn", "kilocode",
+  "custom",
 ] as const;
+
+/**
+ * Transform an AdapterExecutionContext to inject Ollama/custom-provider CLI flags.
+ *
+ * When provider is "custom" or a baseUrl is set, this rewrites adapterConfig so
+ * that the upstream hermesExecute receives --provider and --base-url via extraArgs
+ * instead of the config fields (which hermes-paperclip-adapter's VALID_PROVIDERS
+ * guard would reject). Provider is reset to "auto" so the guard passes.
+ *
+ * Returns ctx unchanged when no custom provider work is needed (fast path).
+ */
+export function buildCustomProviderCtx(ctx: AdapterExecutionContext): AdapterExecutionContext {
+  const config = (ctx.agent?.adapterConfig ?? {}) as Record<string, unknown>;
+  const provider = typeof config.provider === "string" ? config.provider : "";
+  const baseUrl = typeof config.baseUrl === "string" ? config.baseUrl.trim() : "";
+
+  if (provider !== "custom" && !baseUrl) {
+    return ctx;
+  }
+
+  const existingExtraArgs = Array.isArray(config.extraArgs) ? [...config.extraArgs as string[]] : [];
+  const injected: string[] = [];
+
+  if (provider === "custom") {
+    injected.push("--provider", "custom");
+  }
+  if (baseUrl) {
+    injected.push("--base-url", baseUrl);
+  }
+
+  return {
+    ...ctx,
+    agent: {
+      ...ctx.agent,
+      adapterConfig: {
+        ...config,
+        provider: "auto",
+        extraArgs: [...injected, ...existingExtraArgs],
+      },
+    },
+  };
+}
+
+async function hermesExecuteWithCustomProvider(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult> {
+  // Cast needed: local AdapterExecutionContext extends the installed package's type (extra onSpawn fields).
+  return hermesExecute(buildCustomProviderCtx(ctx) as Parameters<typeof hermesExecute>[0]);
+}
 
 const hermesLocalAdapter: ServerAdapterModule = {
   type: "hermes_local",
-  execute: hermesExecute,
+  execute: hermesExecuteWithCustomProvider,
   testEnvironment: hermesTestEnvironment,
   sessionCodec: hermesSessionCodec,
   listSkills: hermesListSkills,
@@ -237,8 +285,16 @@ const hermesLocalAdapter: ServerAdapterModule = {
           type: "select",
           options: HERMES_VALID_PROVIDERS.map((p) => ({ value: p, label: p })),
           default: "auto",
-          hint: "Inference provider. 'auto' lets Hermes detect from model name.",
+          hint: "Inference provider. 'auto' lets Hermes detect from model name. Use 'custom' for Ollama or any OpenAI-compatible local endpoint.",
           group: "Core",
+        },
+        {
+          key: "baseUrl",
+          label: "Base URL",
+          type: "text",
+          hint: "OpenAI-compatible base URL for local providers (e.g. http://localhost:11434/v1 for Ollama). Only used when provider is 'custom'.",
+          group: "Core",
+          conditionalOn: { key: "provider", value: "custom" },
         },
         {
           key: "timeoutSec",

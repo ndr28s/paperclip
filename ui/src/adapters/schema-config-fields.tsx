@@ -370,6 +370,14 @@ export function SchemaConfigFields({
   return (
     <>
       {schema.fields.map((field) => {
+        if (field.conditionalOn) {
+          const controlField = schema.fields.find((f) => f.key === field.conditionalOn!.key);
+          if (controlField) {
+            const controlVal = readValue(controlField);
+            if (controlVal !== field.conditionalOn.value) return null;
+          }
+        }
+
         switch (field.type) {
           case "select": {
             const currentVal = String(readValue(field) ?? "");

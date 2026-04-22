@@ -54,3 +54,11 @@ export {
   redactTranscriptEntryPaths,
 } from "./log-redaction.js";
 export { inferOpenAiCompatibleBiller } from "./billing.js";
+export type {
+  AuxProvider,
+  AuxTask,
+  AuxMessage,
+  AuxCallOptions,
+  AuxCallResult,
+} from "./auxiliary-client.js";
+export { callAuxLLM, getAuxBackendInfo } from "./auxiliary-client.js";
