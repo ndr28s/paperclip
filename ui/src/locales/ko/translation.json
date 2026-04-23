@@ -7,7 +7,7 @@
     "issues": "이슈",
     "routines": "루틴",
     "goals": "목표",
-    "questions": "질문",
+    "questions": "회의실",
     "projects": "프로젝트",
     "agents": "에이전트",
     "company": "회사",
@@ -119,8 +119,8 @@
     "noProjects": "프로젝트 없음"
   },
   "questions": {
-    "title": "질문",
-    "selectCompany": "질문을 보려면 회사를 선택하세요.",
+    "title": "회의실",
+    "selectCompany": "회의실을 보려면 회사를 선택하세요.",
     "noQuestionsYet": "아직 질문이 없습니다. 아래에서 질문해 보세요.",
     "hint": "Enter로 전송 · Shift+Enter로 줄바꿈 · /issue <제목>으로 정식 이슈 생성",
     "placeholder": "질문을 입력하세요..."

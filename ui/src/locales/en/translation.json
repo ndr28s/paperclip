@@ -7,7 +7,7 @@
     "issues": "Issues",
     "routines": "Routines",
     "goals": "Goals",
-    "questions": "Questions",
+    "questions": "Meeting Room",
     "projects": "Projects",
     "agents": "Agents",
     "company": "Company",
@@ -118,8 +118,8 @@
     "noProjects": "No projects"
   },
   "questions": {
-    "title": "Questions",
-    "selectCompany": "Select a company to view questions.",
+    "title": "Meeting Room",
+    "selectCompany": "Select a company to view the meeting room.",
     "noQuestionsYet": "No questions yet. Ask something below.",
     "hint": "Enter to send · Shift+Enter for new line · /issue <title> to create a formal issue",
     "placeholder": "Ask a question..."
