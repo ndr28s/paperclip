@@ -368,6 +368,14 @@ const hermesLocalAdapter: ServerAdapterModule = {
           group: "Advanced",
         },
         {
+          key: "extraArgs",
+          label: "Extra CLI args",
+          type: "text",
+          hint: "Space-separated additional arguments passed to the hermes CLI (e.g. --no-tools --json). Applied after all other flags.",
+          group: "Advanced",
+          meta: { spaceArray: true },
+        },
+        {
           key: "promptTemplate",
           label: "Prompt template",
           type: "textarea",

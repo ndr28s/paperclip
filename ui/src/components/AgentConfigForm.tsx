@@ -774,23 +774,26 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
               )}
               <uiAdapter.ConfigFields {...adapterFieldProps} />
 
-              <Field label={t('agentConfigForm.extraArgs')} hint={help.extraArgs}>
-                <DraftInput
-                  value={
-                    isCreate
-                      ? val!.extraArgs
-                      : eff("adapterConfig", "extraArgs", formatArgList(config.extraArgs))
-                  }
-                  onCommit={(v) =>
-                    isCreate
-                      ? set!({ extraArgs: v })
-                      : mark("adapterConfig", "extraArgs", v?.trim() ? parseCommaArgs(v) : null)
-                  }
-                  immediate
-                  className={inputClass}
-                  placeholder="e.g. --verbose, --foo=bar"
-                />
-              </Field>
+              {/* hermes_local defines extraArgs in its adapter schema via SchemaConfigFields */}
+              {adapterType !== "hermes_local" && (
+                <Field label={t('agentConfigForm.extraArgs')} hint={help.extraArgs}>
+                  <DraftInput
+                    value={
+                      isCreate
+                        ? val!.extraArgs
+                        : eff("adapterConfig", "extraArgs", formatArgList(config.extraArgs))
+                    }
+                    onCommit={(v) =>
+                      isCreate
+                        ? set!({ extraArgs: v })
+                        : mark("adapterConfig", "extraArgs", v?.trim() ? parseCommaArgs(v) : null)
+                    }
+                    immediate
+                    className={inputClass}
+                    placeholder="e.g. --verbose, --foo=bar"
+                  />
+                </Field>
+              )}
 
               <Field label={t('agentConfigForm.envVars')} hint={help.envVars}>
                 <EnvVarEditor

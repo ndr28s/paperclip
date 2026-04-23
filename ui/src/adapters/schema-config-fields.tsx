@@ -319,19 +319,32 @@ export function SchemaConfigFields({
   if (!schema || schema.fields.length === 0) return null;
 
   function readValue(field: ConfigFieldSchema): unknown {
+    let raw: unknown;
     if (isCreate) {
-      return values?.adapterSchemaValues?.[field.key] ?? getDefaultValue(field);
+      raw = values?.adapterSchemaValues?.[field.key] ?? getDefaultValue(field);
+    } else {
+      const stored = config[field.key];
+      raw = eff("adapterConfig", field.key, (stored ?? getDefaultValue(field)) as string);
     }
-    const stored = config[field.key];
-    return eff("adapterConfig", field.key, (stored ?? getDefaultValue(field)) as string);
+    // spaceArray fields are stored as string[] but displayed as space-separated text
+    if (field.meta?.spaceArray && Array.isArray(raw)) {
+      return (raw as string[]).join(" ");
+    }
+    return raw;
   }
 
   function writeValue(field: ConfigFieldSchema, value: unknown): void {
+    // spaceArray fields: convert the display string back to an array before storing
+    const storeValue =
+      field.meta?.spaceArray && typeof value === "string"
+        ? value.trim().split(/\s+/).filter(Boolean)
+        : value;
+
     if (isCreate) {
       const next = {
         adapterSchemaValues: {
           ...values?.adapterSchemaValues,
-          [field.key]: value,
+          [field.key]: storeValue,
         },
       };
 
@@ -350,7 +363,7 @@ export function SchemaConfigFields({
 
       set?.(next);
     } else {
-      mark("adapterConfig", field.key, value);
+      mark("adapterConfig", field.key, storeValue);
 
       // Same logic for edit mode
       if (field.key === "provider" && schema) {
