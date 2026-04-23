@@ -1011,13 +1011,31 @@ export function DesignGuide() {
       {/*  EMPTY STATE                                                  */}
       {/* ============================================================ */}
       <Section title="Empty State">
-        <div className="border border-border rounded-md">
-          <EmptyState
-            icon={Inbox}
-            message="No items to show. Create your first one to get started."
-            action="Create Item"
-            onAction={() => {}}
-          />
+        <div className="space-y-4">
+          <div className="border border-border rounded-md">
+            <EmptyState
+              icon={Inbox}
+              message="No items to show. Create your first one to get started."
+              action="Create Item"
+              onAction={() => {}}
+            />
+          </div>
+          <div className="border border-border rounded-md">
+            <EmptyState
+              icon={Inbox}
+              message="No items found. Create one or import from an existing source."
+              action="Create Item"
+              onAction={() => {}}
+              secondaryAction={{ label: "Import", onClick: () => {}, icon: <Upload className="h-4 w-4 mr-1.5" /> }}
+            />
+          </div>
+          <div className="border border-border rounded-md">
+            <EmptyState
+              icon={Inbox}
+              message="Nothing here yet."
+              secondaryAction={{ label: "Learn more", onClick: () => {} }}
+            />
+          </div>
         </div>
       </Section>
 
