@@ -11,6 +11,7 @@ import {
   Boxes,
   Repeat,
   Settings,
+  MessageSquare,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -96,6 +97,7 @@ export function Sidebar() {
           <SidebarNavItem to="/issues" label={t('nav.issues')} icon={CircleDot} />
           <SidebarNavItem to="/routines" label={t('nav.routines')} icon={Repeat} />
           <SidebarNavItem to="/goals" label={t('nav.goals')} icon={Target} />
+          <SidebarNavItem to="/questions" label={t('nav.questions')} icon={MessageSquare} />
         </SidebarSection>
 
         <SidebarProjects />
