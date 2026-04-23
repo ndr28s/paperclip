@@ -76,6 +76,7 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -408,6 +409,7 @@ interface InboxMobileToolbarProps {
   onCopy: () => void;
   onProperties: () => void;
   onHide: () => void;
+  onDelete: () => void;
 }
 
 function InboxMobileToolbar({
@@ -419,6 +421,7 @@ function InboxMobileToolbar({
   onCopy,
   onProperties,
   onHide,
+  onDelete,
 }: InboxMobileToolbarProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -484,6 +487,15 @@ function InboxMobileToolbar({
               >
                 <EyeOff className="h-3 w-3" />
                 Hide this issue
+              </button>
+            )}
+            {issueIdProp && (
+              <button
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
+                onClick={() => { onDelete(); setMenuOpen(false); }}
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete issue
               </button>
             )}
           </PopoverContent>
@@ -880,6 +892,7 @@ export function IssueDetail() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobilePropsOpen, setMobilePropsOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [detailTab, setDetailTab] = useState("chat");
   const [pendingApprovalAction, setPendingApprovalAction] = useState<{
     approvalId: string;
@@ -1769,6 +1782,22 @@ export function IssueDetail() {
     },
   });
 
+  const deleteIssue = useMutation({
+    mutationFn: () => issuesApi.remove(issueId!),
+    onSuccess: () => {
+      invalidateIssueCollections();
+      navigate("/issues/all", { replace: true });
+      pushToast({ title: "Issue deleted", tone: "success" });
+    },
+    onError: (err) => {
+      pushToast({
+        title: "Delete failed",
+        body: err instanceof Error ? err.message : "Unable to delete this issue",
+        tone: "error",
+      });
+    },
+  });
+
   useEffect(() => {
     setBreadcrumbs([
       sourceBreadcrumb,
@@ -2029,6 +2058,7 @@ export function IssueDetail() {
         { onSuccess: () => navigate("/issues/all") },
       );
     },
+    onDelete: () => setDeleteConfirmOpen(true),
   });
   inboxToolbarCallbacksRef.current = {
     onArchive: () => {
@@ -2042,6 +2072,7 @@ export function IssueDetail() {
         { onSuccess: () => navigate("/issues/all") },
       );
     },
+    onDelete: () => setDeleteConfirmOpen(true),
   };
 
   const backHref = sourceBreadcrumb.href ?? "/inbox";
@@ -2065,6 +2096,7 @@ export function IssueDetail() {
         onCopy={() => inboxToolbarCallbacksRef.current.onCopy()}
         onProperties={() => inboxToolbarCallbacksRef.current.onProperties()}
         onHide={() => inboxToolbarCallbacksRef.current.onHide()}
+        onDelete={() => inboxToolbarCallbacksRef.current.onDelete()}
       />,
     );
 
@@ -2343,6 +2375,13 @@ export function IssueDetail() {
               >
                 <EyeOff className="h-3 w-3" />
                 Hide this Issue
+              </button>
+              <button
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50 text-destructive"
+                onClick={() => { setDeleteConfirmOpen(true); setMoreOpen(false); }}
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete issue
               </button>
             </PopoverContent>
             </Popover>
@@ -2719,6 +2758,29 @@ export function IssueDetail() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>이슈 삭제</DialogTitle>
+            <DialogDescription>
+              이슈를 삭제하면 복구할 수 없습니다. 계속하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteIssue.isPending}
+              onClick={() => deleteIssue.mutate()}
+            >
+              삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ScrollToBottom />
     </div>
   );
