@@ -16,6 +16,7 @@ import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
 import { MetricCard } from "../components/MetricCard";
 import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 import { StatusIcon } from "../components/StatusIcon";
 
 import { ActivityRow } from "../components/ActivityRow";
@@ -56,7 +57,7 @@ export function Dashboard() {
     setBreadcrumbs([{ label: t('nav.dashboard') }]);
   }, [setBreadcrumbs, t]);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.dashboard(selectedCompanyId!),
     queryFn: () => dashboardApi.summary(selectedCompanyId!),
     enabled: !!selectedCompanyId,
@@ -200,11 +201,21 @@ export function Dashboard() {
     return <PageSkeleton variant="dashboard" />;
   }
 
+  if (error) {
+    return (
+      <ErrorState
+        icon={LayoutDashboard}
+        message={error.message}
+        onRetry={() => refetch()}
+        retryLabel={t("common.retry")}
+      />
+    );
+  }
+
   const hasNoAgents = agents !== undefined && agents.length === 0;
 
   return (
     <div className="space-y-6">
-      {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {hasNoAgents && (
         <div className="flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-500/25 dark:bg-amber-950/60">

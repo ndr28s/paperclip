@@ -65,7 +65,9 @@
     "next": "다음",
     "none": "없음",
     "copied": "복사됨",
-    "copyFailed": "복사 실패"
+    "copyFailed": "복사 실패",
+    "retry": "다시 시도",
+    "somethingWentWrong": "오류가 발생했습니다"
   },
   "agents": {
     "title": "에이전트",

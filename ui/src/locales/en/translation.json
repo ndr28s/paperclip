@@ -65,7 +65,9 @@
     "next": "Next",
     "none": "None",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "retry": "Retry",
+    "somethingWentWrong": "Something went wrong"
   },
   "agents": {
     "title": "Agents",

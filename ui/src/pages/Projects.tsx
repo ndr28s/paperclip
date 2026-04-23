@@ -9,6 +9,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { EntityRow } from "../components/EntityRow";
 import { StatusBadge } from "../components/StatusBadge";
 import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { formatDate, projectUrl } from "../lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export function Projects() {
     setBreadcrumbs([{ label: t("projects.title") }]);
   }, [setBreadcrumbs, t]);
 
-  const { data: allProjects, isLoading, error } = useQuery({
+  const { data: allProjects, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.projects.list(selectedCompanyId!),
     queryFn: () => projectsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
@@ -42,6 +43,17 @@ export function Projects() {
     return <PageSkeleton variant="list" />;
   }
 
+  if (error) {
+    return (
+      <ErrorState
+        icon={Hexagon}
+        message={error.message}
+        onRetry={() => refetch()}
+        retryLabel={t("common.retry")}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
@@ -50,8 +62,6 @@ export function Projects() {
           {t("projectDetail.addProject")}
         </Button>
       </div>
-
-      {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {!isLoading && projects.length === 0 && (
         <EmptyState

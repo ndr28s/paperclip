@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AlertCircle,
   BookOpen,
   Bot,
   Check,
@@ -20,6 +21,7 @@ import {
   Trash2,
   Upload,
   User,
+  WifiOff,
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,6 +120,7 @@ import { PriorityIcon } from "@/components/PriorityIcon";
 import { agentStatusDot, agentStatusDotDefault } from "@/lib/status-colors";
 import { EntityRow } from "@/components/EntityRow";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
 import { MetricCard } from "@/components/MetricCard";
 import { FilterBar, type FilterValue } from "@/components/FilterBar";
 import { InlineEditor } from "@/components/InlineEditor";
@@ -222,7 +225,7 @@ export function DesignGuide() {
           <SubSection title="App components">
             <div className="flex flex-wrap gap-2">
               {[
-                "StatusBadge", "StatusIcon", "PriorityIcon", "EntityRow", "EmptyState", "MetricCard",
+                "StatusBadge", "StatusIcon", "PriorityIcon", "EntityRow", "EmptyState", "ErrorState", "MetricCard",
                 "FilterBar", "InlineEditor", "PageSkeleton", "Identity", "CommentThread", "MarkdownEditor",
                 "PropertiesPanel", "Sidebar", "CommandPalette",
               ].map((name) => (
@@ -1034,6 +1037,33 @@ export function DesignGuide() {
               icon={Inbox}
               message="Nothing here yet."
               secondaryAction={{ label: "Learn more", onClick: () => {} }}
+            />
+          </div>
+        </div>
+      </Section>
+
+      {/* ============================================================ */}
+      {/*  ERROR STATE                                                  */}
+      {/* ============================================================ */}
+      <Section title="Error State">
+        <div className="space-y-4">
+          <div className="border border-border rounded-md">
+            <ErrorState
+              message="We couldn't load the data. Please try again."
+              onRetry={() => {}}
+            />
+          </div>
+          <div className="border border-border rounded-md">
+            <ErrorState
+              icon={WifiOff}
+              message="Network error. Check your connection and retry."
+              onRetry={() => {}}
+            />
+          </div>
+          <div className="border border-border rounded-md">
+            <ErrorState
+              icon={AlertCircle}
+              message="This resource could not be found."
             />
           </div>
         </div>

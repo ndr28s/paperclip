@@ -79,6 +79,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ErrorState } from "../components/ErrorState";
 import { formatIssueActivityAction } from "@/lib/activity-format";
 import { buildIssuePropertiesPanelKey } from "../lib/issue-properties-panel-key";
 import { shouldRenderRichSubIssuesSection } from "../lib/issue-detail-subissues";
@@ -92,7 +93,6 @@ import {
   Copy,
   EyeOff,
   Hexagon,
-  AlertCircle,
   MessageSquare,
   MoreHorizontal,
   MoreVertical,
@@ -905,7 +905,7 @@ export function IssueDetail() {
     [location.state, resolvedIssueDetailState],
   );
 
-  const { data: issue, isLoading, error } = useQuery({
+  const { data: issue, isLoading, error, refetch } = useQuery({
     ...getIssueDetailQueryOptions(queryClient, issueId!, {
       placeholderIssue: issueHeaderSeed ? {
         id: issueHeaderSeed.id,
@@ -2106,10 +2106,11 @@ export function IssueDetail() {
   if (isLoading) return <IssueDetailLoadingState headerSeed={issueHeaderSeed} />;
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-        <AlertCircle className="h-8 w-8 text-destructive/60" />
-        <p className="text-sm font-medium text-destructive">{error.message}</p>
-      </div>
+      <ErrorState
+        message={error.message}
+        onRetry={() => refetch()}
+        retryLabel={t("common.retry")}
+      />
     );
   }
   if (!issue) return null;
