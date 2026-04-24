@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
-import { issuesApi } from "../api/issues";
+import { meetingsApi } from "../api/meetings";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
 import { heartbeatsApi } from "../api/heartbeats";
+import { ApiError } from "../api/client";
 import { queryKeys } from "../lib/queryKeys";
 import { buildMarkdownMentionOptions } from "../lib/company-members";
 import { EmptyState } from "../components/EmptyState";
@@ -16,15 +17,8 @@ import { MarkdownBody } from "../components/MarkdownBody";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { parseAgentMentionHref } from "@paperclipai/shared";
-import type { IssueComment } from "@paperclipai/shared";
+import type { MeetingMessage } from "@paperclipai/shared";
 import type { Agent } from "@paperclipai/shared";
-
-const MEETING_LABEL_NAME = "meeting";
-const MEETING_LABEL_COLOR = "#0ea5e9";
-
-function meetingStorageKey(companyId: string) {
-  return `paperclip:meeting-issue:${companyId}`;
-}
 
 function extractMentionedAgentId(markdown: string): string | null {
   const matches = [...markdown.matchAll(/\(([^)]+)\)/g)];
@@ -36,14 +30,15 @@ function extractMentionedAgentId(markdown: string): string | null {
 }
 
 function ChatBubble({
-  comment,
+  message,
   agentMap,
 }: {
-  comment: IssueComment;
+  message: MeetingMessage;
   agentMap: Map<string, Agent>;
 }) {
-  const isUser = !!comment.authorUserId && !comment.authorAgentId;
-  const agent = comment.authorAgentId ? agentMap.get(comment.authorAgentId) : null;
+  const isUser = message.authorType === "user";
+  const agent = message.authorAgentId ? agentMap.get(message.authorAgentId) : null;
+  const agentName = message.agentName ?? agent?.name ?? null;
 
   return (
     <div className={cn("flex gap-2 items-end", isUser ? "flex-row-reverse" : "flex-row")}>
@@ -55,10 +50,10 @@ function ChatBubble({
             : "bg-accent text-accent-foreground rounded-bl-sm",
         )}
       >
-        {agent && (
-          <p className="text-[11px] font-semibold mb-1 opacity-60">{agent.name}</p>
+        {!isUser && agentName && (
+          <p className="text-[11px] font-semibold mb-1 opacity-60">{agentName}</p>
         )}
-        <MarkdownBody className="prose-sm">{comment.body}</MarkdownBody>
+        <MarkdownBody className="prose-sm">{message.body}</MarkdownBody>
       </div>
     </div>
   );
@@ -69,10 +64,6 @@ export function Questions() {
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const [body, setBody] = useState("");
-  const [meetingIssueId, setMeetingIssueId] = useState<string | null>(() => {
-    if (!selectedCompanyId) return null;
-    return localStorage.getItem(meetingStorageKey(selectedCompanyId));
-  });
   const editorRef = useRef<MarkdownEditorRef>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -80,24 +71,6 @@ export function Questions() {
   useEffect(() => {
     setBreadcrumbs([{ label: t("questions.title") }]);
   }, [setBreadcrumbs, t]);
-
-  // Persist meetingIssueId
-  useEffect(() => {
-    if (!selectedCompanyId) return;
-    if (meetingIssueId) {
-      localStorage.setItem(meetingStorageKey(selectedCompanyId), meetingIssueId);
-    } else {
-      localStorage.removeItem(meetingStorageKey(selectedCompanyId));
-    }
-  }, [meetingIssueId, selectedCompanyId]);
-
-  // Labels
-  const { data: labels } = useQuery({
-    queryKey: queryKeys.issues.labels(selectedCompanyId!),
-    queryFn: () => issuesApi.listLabels(selectedCompanyId!),
-    enabled: !!selectedCompanyId,
-  });
-  const meetingLabel = labels?.find((l) => l.name === MEETING_LABEL_NAME);
 
   // Agents + projects for @mention
   const { data: agents } = useQuery({
@@ -120,159 +93,131 @@ export function Questions() {
   );
   const ceoAgent = useMemo(() => agents?.find((a) => a.role === "ceo"), [agents]);
 
-  // Current meeting issue
-  const { data: meetingIssue } = useQuery({
-    queryKey: queryKeys.issues.detail(meetingIssueId ?? ""),
-    queryFn: () => issuesApi.get(meetingIssueId!),
-    enabled: !!meetingIssueId,
+  // Active session (poll every 5s in case another tab ends it)
+  const {
+    data: activeSession,
+    error: activeSessionError,
+    isLoading: sessionLoading,
+  } = useQuery({
+    queryKey: queryKeys.meetingSessions.active(selectedCompanyId!),
+    queryFn: () => meetingsApi.getActiveSession(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 5000,
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && error.status === 404) return false;
+      return failureCount < 2;
+    },
   });
 
-  useEffect(() => {
-    if (meetingIssue?.status === "done" || meetingIssue?.status === "cancelled") {
-      setMeetingIssueId(null);
-    }
-  }, [meetingIssue?.status]);
+  const sessionId = activeSession?.id ?? null;
 
-  // Comments (poll every 3s)
-  const { data: comments } = useQuery({
-    queryKey: queryKeys.issues.comments(meetingIssueId ?? ""),
-    queryFn: () => issuesApi.listComments(meetingIssueId!, { order: "asc" }),
-    enabled: !!meetingIssueId,
+  // Messages (poll every 3s)
+  const { data: messages } = useQuery({
+    queryKey: queryKeys.meetingSessions.messages(selectedCompanyId!, sessionId ?? ""),
+    queryFn: () => meetingsApi.listMessages(selectedCompanyId!, sessionId!),
+    enabled: !!selectedCompanyId && !!sessionId,
     refetchInterval: 3000,
   });
 
-  // Active run on meeting issue
-  const { data: activeRun } = useQuery({
-    queryKey: queryKeys.issues.activeRun(meetingIssueId ?? ""),
-    queryFn: () => heartbeatsApi.activeRunForIssue(meetingIssueId!),
-    enabled: !!meetingIssueId,
-    refetchInterval: 3000,
-  });
-
-  // All live runs (to detect agent busy elsewhere)
+  // All live runs — detect if session agent is busy
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.liveRuns(selectedCompanyId!),
     queryFn: () => heartbeatsApi.liveRunsForCompany(selectedCompanyId!),
-    enabled: !!selectedCompanyId,
+    enabled: !!selectedCompanyId && !!sessionId,
     refetchInterval: 5000,
   });
 
-  const assignedAgentId = meetingIssue?.assigneeAgentId ?? ceoAgent?.id;
-  const busyRun = useMemo(() => {
-    if (!assignedAgentId || !liveRuns) return null;
-    return (
-      liveRuns.find((r) => r.agentId === assignedAgentId && r.issueId !== meetingIssueId) ?? null
-    );
-  }, [assignedAgentId, liveRuns, meetingIssueId]);
-
-  const { data: busyIssue } = useQuery({
-    queryKey: queryKeys.issues.detail(busyRun?.issueId ?? ""),
-    queryFn: () => issuesApi.get(busyRun!.issueId!),
-    enabled: !!busyRun?.issueId,
-  });
+  const assignedAgentId = activeSession?.agentId ?? ceoAgent?.id ?? null;
+  const isResponding = useMemo(() => {
+    if (!assignedAgentId || !liveRuns) return false;
+    return liveRuns.some((r) => r.agentId === assignedAgentId);
+  }, [assignedAgentId, liveRuns]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments?.length]);
+  }, [messages?.length]);
 
   // Mutations
-  const createLabelMutation = useMutation({
-    mutationFn: () =>
-      issuesApi.createLabel(selectedCompanyId!, {
-        name: MEETING_LABEL_NAME,
-        color: MEETING_LABEL_COLOR,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.labels(selectedCompanyId!) });
+  const createSessionMutation = useMutation({
+    mutationFn: (agentId?: string | null) =>
+      meetingsApi.createSession(selectedCompanyId!, agentId),
+    onSuccess: (session) => {
+      queryClient.setQueryData(
+        queryKeys.meetingSessions.active(selectedCompanyId!),
+        session,
+      );
     },
   });
 
-  const createIssueMutation = useMutation({
-    mutationFn: (payload: { labelId: string; assigneeAgentId?: string }) =>
-      issuesApi.create(selectedCompanyId!, {
-        title: "회의",
-        labelIds: [payload.labelId],
-        status: "in_progress",
-        ...(payload.assigneeAgentId ? { assigneeAgentId: payload.assigneeAgentId } : {}),
-      }),
-  });
-
-  const addCommentMutation = useMutation({
-    mutationFn: ({ issueId, text }: { issueId: string; text: string }) =>
-      issuesApi.addComment(issueId, text, true),
-    onSuccess: (_, { issueId }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.comments(issueId) });
+  const sendMessageMutation = useMutation({
+    mutationFn: ({ sid, text }: { sid: string; text: string }) =>
+      meetingsApi.sendMessage(selectedCompanyId!, sid, text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.meetingSessions.messages(selectedCompanyId!, sessionId ?? ""),
+      });
       setBody("");
     },
   });
 
   async function handleSubmit() {
     const trimmed = body.trim();
-    if (!trimmed) return;
+    if (!trimmed || !selectedCompanyId) return;
 
-    const mentionedAgentId = extractMentionedAgentId(trimmed);
-    const targetAgentId = mentionedAgentId ?? ceoAgent?.id;
+    let sid = sessionId;
 
-    let issueId = meetingIssueId;
-
-    if (!issueId) {
-      let labelId = meetingLabel?.id;
-      if (!labelId) {
-        const newLabel = await createLabelMutation.mutateAsync();
-        labelId = newLabel.id;
-      }
-      const issue = await createIssueMutation.mutateAsync({
-        labelId,
-        assigneeAgentId: targetAgentId,
-      });
-      issueId = issue.id;
-      setMeetingIssueId(issue.id);
-      // Hide from the issues list — meeting threads are only visible in 회의 page
-      await issuesApi.update(issue.id, { hiddenAt: new Date().toISOString() });
+    if (!sid) {
+      const mentionedAgentId = extractMentionedAgentId(trimmed);
+      const targetAgentId = mentionedAgentId ?? ceoAgent?.id ?? null;
+      const session = await createSessionMutation.mutateAsync(targetAgentId);
+      sid = session.id;
     }
 
-    await addCommentMutation.mutateAsync({ issueId, text: trimmed });
+    await sendMessageMutation.mutateAsync({ sid, text: trimmed });
   }
 
-  function startNewMeeting() {
-    setMeetingIssueId(null);
+  async function startNewMeeting() {
+    if (!selectedCompanyId) return;
+    const mentionedAgentId = extractMentionedAgentId(body);
+    const targetAgentId = mentionedAgentId ?? ceoAgent?.id ?? null;
+    const session = await createSessionMutation.mutateAsync(targetAgentId);
+    queryClient.setQueryData(
+      queryKeys.meetingSessions.messages(selectedCompanyId, session.id),
+      [],
+    );
   }
 
   if (!selectedCompanyId) {
     return <EmptyState icon={MessageSquare} message={t("questions.selectCompany")} />;
   }
 
-  const isResponding = !!activeRun;
-  const isBusyElsewhere = !isResponding && !!busyRun;
   const displayAgentName =
     (assignedAgentId ? agentMap.get(assignedAgentId)?.name : null) ?? ceoAgent?.name ?? "CEO";
+
   const isPending =
-    addCommentMutation.isPending ||
-    createIssueMutation.isPending ||
-    createLabelMutation.isPending;
+    sendMessageMutation.isPending ||
+    createSessionMutation.isPending;
+
+  const hasActiveSession = !!sessionId && !(activeSessionError instanceof ApiError && activeSessionError.status === 404);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Status bar */}
-      {(isResponding || isBusyElsewhere) && (
+      {isResponding && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-muted/40 text-xs text-muted-foreground shrink-0">
           <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-          <span>
-            {isResponding
-              ? `${displayAgentName} 응답 중...`
-              : `${displayAgentName} 업무중${busyIssue ? ` (${busyIssue.identifier})` : ""}`}
-          </span>
+          <span>{displayAgentName} 응답 중...</span>
         </div>
       )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {!meetingIssueId && (
+        {(!hasActiveSession || !messages?.length) && !sessionLoading && (
           <EmptyState icon={MessageSquare} message={t("questions.noQuestionsYet")} />
         )}
-        {comments?.map((comment) => (
-          <ChatBubble key={comment.id} comment={comment} agentMap={agentMap} />
+        {messages?.map((message) => (
+          <ChatBubble key={message.id} message={message} agentMap={agentMap} />
         ))}
         <div ref={messagesEndRef} />
       </div>
@@ -294,6 +239,7 @@ export function Questions() {
             size="sm"
             variant="ghost"
             onClick={startNewMeeting}
+            disabled={createSessionMutation.isPending}
             className="text-xs text-muted-foreground h-7 px-2"
           >
             <Plus className="h-3 w-3 mr-1" />

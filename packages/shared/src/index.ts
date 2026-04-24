@@ -393,6 +393,8 @@ export type {
   PluginWebhookDeliveryRecord,
   QuotaWindow,
   ProviderQuotaResult,
+  MeetingSession,
+  MeetingMessage,
 } from "./types/index.js";
 
 export {

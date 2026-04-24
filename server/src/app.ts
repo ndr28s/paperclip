@@ -26,6 +26,7 @@ import { dashboardRoutes } from "./routes/dashboard.js";
 import { sidebarBadgeRoutes } from "./routes/sidebar-badges.js";
 import { sidebarPreferenceRoutes } from "./routes/sidebar-preferences.js";
 import { inboxDismissalRoutes } from "./routes/inbox-dismissals.js";
+import { meetingRoutes } from "./routes/meetings.js";
 import { instanceSettingsRoutes } from "./routes/instance-settings.js";
 import { agentMemoryRoutes } from "./routes/agent-memory.js";
 import { llmRoutes } from "./routes/llms.js";

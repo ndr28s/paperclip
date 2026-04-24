@@ -164,4 +164,9 @@ export const queryKeys = {
   adapters: {
     all: ["adapters"] as const,
   },
+  meetingSessions: {
+    active: (companyId: string) => ["meeting-sessions", companyId, "active"] as const,
+    messages: (companyId: string, sessionId: string) =>
+      ["meeting-sessions", companyId, sessionId, "messages"] as const,
+  },
 };

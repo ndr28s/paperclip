@@ -221,6 +221,7 @@ export type {
   CompanyPortabilityImportResult,
   CompanyPortabilityExportRequest,
 } from "./company-portability.js";
+export type { MeetingSession, MeetingMessage } from "./meeting.js";
 export type {
   JsonSchema,
   PluginJobDeclaration,
