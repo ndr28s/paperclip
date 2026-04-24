@@ -228,7 +228,8 @@ export function Questions() {
       });
       issueId = issue.id;
       setMeetingIssueId(issue.id);
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
+      // Hide from the issues list — meeting threads are only visible in 회의 page
+      await issuesApi.update(issue.id, { hiddenAt: new Date().toISOString() });
     }
 
     await addCommentMutation.mutateAsync({ issueId, text: trimmed });
