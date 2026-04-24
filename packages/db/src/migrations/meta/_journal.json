@@ -428,6 +428,13 @@
       "when": 1776500001000,
       "tag": "0060_meeting_agent_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1776500002000,
+      "tag": "0061_remove_hidden_issue_id",
+      "breakpoints": true
     }
   ]
 }
