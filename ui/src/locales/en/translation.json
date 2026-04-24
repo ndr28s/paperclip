@@ -123,7 +123,8 @@
     "noQuestionsYet": "No meetings yet. Start a conversation below.",
     "hint": "Describe your topic — this opens a conversation thread where you and the agent can clarify and create issues together. @mention agents or projects to tag them.",
     "placeholder": "What would you like to discuss?",
-    "start": "Start meeting"
+    "start": "Start meeting",
+    "newMeeting": "New meeting"
   },
   "goals": {
     "title": "Goals",
