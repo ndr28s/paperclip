@@ -150,14 +150,17 @@ export function Questions() {
     },
   });
 
+  const [sendError, setSendError] = useState<string | null>(null);
+
   const sendMessageMutation = useMutation({
     mutationFn: ({ sid, text }: { sid: string; text: string }) =>
       meetingsApi.sendMessage(selectedCompanyId!, sid, text),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.meetingSessions.messages(selectedCompanyId!, sessionId ?? ""),
+        queryKey: queryKeys.meetingSessions.messages(selectedCompanyId!, variables.sid),
       });
       setBody("");
+      setSendError(null);
     },
   });
 
@@ -165,16 +168,21 @@ export function Questions() {
     const trimmed = body.trim();
     if (!trimmed || !selectedCompanyId) return;
 
+    setSendError(null);
     let sid = sessionId;
 
-    if (!sid) {
-      const mentionedAgentId = extractMentionedAgentId(trimmed);
-      const targetAgentId = mentionedAgentId ?? ceoAgent?.id ?? null;
-      const session = await createSessionMutation.mutateAsync(targetAgentId);
-      sid = session.id;
-    }
+    try {
+      if (!sid) {
+        const mentionedAgentId = extractMentionedAgentId(trimmed);
+        const targetAgentId = mentionedAgentId ?? ceoAgent?.id ?? null;
+        const session = await createSessionMutation.mutateAsync(targetAgentId);
+        sid = session.id;
+      }
 
-    await sendMessageMutation.mutateAsync({ sid, text: trimmed });
+      await sendMessageMutation.mutateAsync({ sid, text: trimmed });
+    } catch {
+      setSendError("메시지 전송에 실패했습니다. 다시 시도해주세요.");
+    }
   }
 
   async function startNewMeeting() {
@@ -224,6 +232,9 @@ export function Questions() {
 
       {/* Composer */}
       <div className="border-t border-border p-4 shrink-0 space-y-2">
+        {sendError && (
+          <p className="text-xs text-destructive">{sendError}</p>
+        )}
         <p className="text-xs text-muted-foreground">{t("questions.hint")}</p>
         <MarkdownEditor
           ref={editorRef}
