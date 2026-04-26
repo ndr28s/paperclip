@@ -250,6 +250,19 @@ type PaperclipWakeComment = {
   authorId: string | null;
 };
 
+type PaperclipWakeMeetingMessage = {
+  id: string | null;
+  body: string;
+  authorType: "user" | "agent";
+  authorName: string | null;
+  createdAt: string | null;
+};
+
+type PaperclipWakeMeetingSession = {
+  sessionId: string;
+  messages: PaperclipWakeMeetingMessage[];
+};
+
 type PaperclipWakePayload = {
   reason: string | null;
   issue: PaperclipWakeIssue | null;
@@ -263,6 +276,7 @@ type PaperclipWakePayload = {
   missingCount: number;
   truncated: boolean;
   fallbackFetchNeeded: boolean;
+  meetingSession: PaperclipWakeMeetingSession | null;
 };
 
 function normalizePaperclipWakeIssue(value: unknown): PaperclipWakeIssue | null {
@@ -342,6 +356,36 @@ function normalizePaperclipWakeExecutionStage(value: unknown): PaperclipWakeExec
   };
 }
 
+function normalizePaperclipWakeMeetingMessage(value: unknown): PaperclipWakeMeetingMessage | null {
+  const message = parseObject(value);
+  const body = asString(message.body, "");
+  if (!body.trim()) return null;
+  const authorTypeRaw = asString(message.authorType, "").trim().toLowerCase();
+  const authorType: "user" | "agent" = authorTypeRaw === "agent" ? "agent" : "user";
+  return {
+    id: asString(message.id, "").trim() || null,
+    body,
+    authorType,
+    authorName: asString(message.authorName, "").trim() || null,
+    createdAt: asString(message.createdAt, "").trim() || null,
+  };
+}
+
+function normalizePaperclipWakeMeetingSession(value: unknown): PaperclipWakeMeetingSession | null {
+  const session = parseObject(value);
+  const sessionId = asString(session.sessionId, "").trim();
+  if (!sessionId) return null;
+  const messages = Array.isArray(session.messages)
+    ? session.messages
+        .map((entry) => normalizePaperclipWakeMeetingMessage(entry))
+        .filter((entry): entry is PaperclipWakeMeetingMessage => Boolean(entry))
+    : [];
+  return {
+    sessionId,
+    messages,
+  };
+}
+
 export function normalizePaperclipWakePayload(value: unknown): PaperclipWakePayload | null {
   const payload = parseObject(value);
   const comments = Array.isArray(payload.comments)
@@ -356,8 +400,9 @@ export function normalizePaperclipWakePayload(value: unknown): PaperclipWakePayl
         .map((entry) => entry.trim())
     : [];
   const executionStage = normalizePaperclipWakeExecutionStage(payload.executionStage);
+  const meetingSession = normalizePaperclipWakeMeetingSession(payload.meetingSession);
 
-  if (comments.length === 0 && commentIds.length === 0 && !executionStage && !normalizePaperclipWakeIssue(payload.issue)) {
+  if (comments.length === 0 && commentIds.length === 0 && !executionStage && !normalizePaperclipWakeIssue(payload.issue) && !meetingSession) {
     return null;
   }
 
@@ -374,6 +419,7 @@ export function normalizePaperclipWakePayload(value: unknown): PaperclipWakePayl
     missingCount: asNumber(commentWindow.missingCount, 0),
     truncated: asBoolean(payload.truncated, false),
     fallbackFetchNeeded: asBoolean(payload.fallbackFetchNeeded, false),
+    meetingSession,
   };
 }
 

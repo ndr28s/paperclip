@@ -15,6 +15,7 @@ import {
   heartbeatRuns,
   issueComments,
   issues,
+  meetingMessages,
   projects,
   projectWorkspaces,
 } from "@paperclipai/db";
@@ -1282,7 +1283,57 @@ async function buildPaperclipWakePayload(input: {
           .where(and(eq(issues.id, issueId), eq(issues.companyId, input.companyId)))
           .then((rows) => rows[0] ?? null)
       : null);
-  if (commentIds.length === 0 && Object.keys(executionStage).length === 0 && !issueSummary) return null;
+  const wakeReason = readNonEmptyString(input.contextSnapshot.wakeReason);
+  const meetingSessionId = readNonEmptyString(input.contextSnapshot.sessionId);
+  const meetingMessageId = readNonEmptyString(input.contextSnapshot.messageId);
+
+  let meetingContext: {
+    sessionId: string;
+    messageId: string | null;
+    messages: Array<{
+      id: string;
+      body: string;
+      authorType: "user" | "agent";
+      authorName: string | null;
+      createdAt: string;
+    }>;
+  } | null = null;
+
+  if (wakeReason === "meeting_message" && meetingSessionId) {
+    const rows = await input.db
+      .select({
+        id: meetingMessages.id,
+        body: meetingMessages.body,
+        authorUserId: meetingMessages.authorUserId,
+        authorAgentId: meetingMessages.authorAgentId,
+        agentName: agents.name,
+        createdAt: meetingMessages.createdAt,
+      })
+      .from(meetingMessages)
+      .leftJoin(agents, eq(agents.id, meetingMessages.authorAgentId))
+      .where(
+        and(
+          eq(meetingMessages.sessionId, meetingSessionId),
+          eq(meetingMessages.companyId, input.companyId),
+        ),
+      )
+      .orderBy(asc(meetingMessages.createdAt))
+      .limit(20);
+
+    meetingContext = {
+      sessionId: meetingSessionId,
+      messageId: meetingMessageId,
+      messages: rows.map((r) => ({
+        id: r.id,
+        body: r.body,
+        authorType: r.authorAgentId ? "agent" : "user",
+        authorName: r.agentName ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  if (commentIds.length === 0 && Object.keys(executionStage).length === 0 && !issueSummary && !meetingContext) return null;
 
   const commentRows =
     commentIds.length === 0
@@ -1371,6 +1422,9 @@ async function buildPaperclipWakePayload(input: {
     },
     truncated,
     fallbackFetchNeeded: truncated || missingCommentCount > 0,
+    meetingSession: meetingContext
+      ? { sessionId: meetingContext.sessionId, messages: meetingContext.messages }
+      : null,
   };
 }
 
