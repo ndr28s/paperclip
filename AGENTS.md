@@ -147,13 +147,35 @@ When adding endpoints:
 - write activity log entries for mutations
 - return consistent HTTP errors (`400/401/403/404/409/422/500`)
 
-## 9. UI Expectations
+## 9. Meeting Chat (회의 채팅)
+
+When you receive a wake with `reason: meeting_message`, a user has sent a message in the meeting chat UI.
+
+**Flow:**
+1. The wake payload includes a `## Meeting Conversation` section with the full conversation history.
+2. Read the conversation and craft a reply.
+3. POST your reply to the agent-messages endpoint:
+
+```sh
+printf '%s' '{"body":"your reply"}' | python3 -c "$PAPERCLIP_POST_JSON" \
+  /api/companies/$PAPERCLIP_COMPANY_ID/meeting-sessions/<sessionId>/agent-messages
+```
+
+The session ID is shown in the wake payload under `- session: <id>`.
+
+**Rules:**
+- Reply before doing any other work — the user is waiting.
+- Keep replies conversational and concise.
+- Do not create issues or comment on issues as a side-effect of meeting replies.
+- If you need to act on what the user said (e.g. create a task), do so after replying, then optionally send a follow-up message.
+
+## 10. UI Expectations
 
 - Keep routes and nav aligned with available API surface
 - Use company selection context for company-scoped pages
 - Surface failures clearly; do not silently ignore API errors
 
-## 10. Pull Request Requirements
+## 11. Pull Request Requirements
 
 When creating a pull request (via `gh pr create` or any other method), you **must** read and fill in every section of [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). Do not craft ad-hoc PR bodies — use the template as the structure for your PR description. Required sections:
 
@@ -164,7 +186,7 @@ When creating a pull request (via `gh pr create` or any other method), you **mus
 - **Model Used** — the AI model that produced or assisted with the change (provider, exact model ID, context window, capabilities). Write "None — human-authored" if no AI was used.
 - **Checklist** — all items checked
 
-## 11. Definition of Done
+## 12. Definition of Done
 
 A change is done when all are true:
 
@@ -174,7 +196,7 @@ A change is done when all are true:
 4. Docs updated when behavior or commands change
 5. PR description follows the [PR template](.github/PULL_REQUEST_TEMPLATE.md) with all sections filled in (including Model Used)
 
-## 11. Fork-Specific: HenkDz/paperclip
+## 13. Fork-Specific: HenkDz/paperclip
 
 This is a fork of `paperclipai/paperclip` with QoL patches and an **external-only** Hermes adapter story on branch `feat/externalize-hermes-adapter` ([tree](https://github.com/HenkDz/paperclip/tree/feat/externalize-hermes-adapter)).
 

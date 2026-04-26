@@ -443,35 +443,50 @@ export function renderPaperclipWakePrompt(
     return principal.userId ? `user ${principal.userId}` : "user";
   };
 
+  const isMeetingWake = normalized.reason === "meeting_message" && normalized.meetingSession !== null;
+
   const lines = resumedSession
       ? [
         "## Paperclip Resume Delta",
         "",
         "You are resuming an existing Paperclip session.",
-        "This heartbeat is scoped to the issue below. Do not switch to another issue until you have handled this wake.",
-        "Focus on the new wake delta below and continue the current task without restating the full heartbeat boilerplate.",
-        "Fetch the API thread only when `fallbackFetchNeeded` is true or you need broader history than this batch.",
+        isMeetingWake
+          ? "A new meeting chat message has arrived. Read the conversation below and reply via the agent-messages API."
+          : "This heartbeat is scoped to the issue below. Do not switch to another issue until you have handled this wake.",
+        isMeetingWake
+          ? "Focus on the meeting conversation below."
+          : "Focus on the new wake delta below and continue the current task without restating the full heartbeat boilerplate.",
         "",
         `- reason: ${normalized.reason ?? "unknown"}`,
-        `- issue: ${normalized.issue?.identifier ?? normalized.issue?.id ?? "unknown"}${normalized.issue?.title ? ` ${normalized.issue.title}` : ""}`,
-        `- pending comments: ${normalized.includedCount}/${normalized.requestedCount}`,
-        `- latest comment id: ${normalized.latestCommentId ?? "unknown"}`,
-        `- fallback fetch needed: ${normalized.fallbackFetchNeeded ? "yes" : "no"}`,
+        ...(isMeetingWake
+          ? [`- session: ${normalized.meetingSession!.sessionId}`]
+          : [
+              `- issue: ${normalized.issue?.identifier ?? normalized.issue?.id ?? "unknown"}${normalized.issue?.title ? ` ${normalized.issue.title}` : ""}`,
+              `- pending comments: ${normalized.includedCount}/${normalized.requestedCount}`,
+              `- latest comment id: ${normalized.latestCommentId ?? "unknown"}`,
+              `- fallback fetch needed: ${normalized.fallbackFetchNeeded ? "yes" : "no"}`,
+            ]),
       ]
     : [
         "## Paperclip Wake Payload",
         "",
         "Treat this wake payload as the highest-priority change for the current heartbeat.",
-        "This heartbeat is scoped to the issue below. Do not switch to another issue until you have handled this wake.",
-        "Before generic repo exploration or boilerplate heartbeat updates, acknowledge the latest comment and explain how it changes your next action.",
-        "Use this inline wake data first before refetching the issue thread.",
-        "Only fetch the API thread when `fallbackFetchNeeded` is true or you need broader history than this batch.",
+        isMeetingWake
+          ? "A new meeting chat message has arrived. Read the conversation below and reply via the agent-messages API."
+          : "This heartbeat is scoped to the issue below. Do not switch to another issue until you have handled this wake.",
+        isMeetingWake
+          ? "Reply to the user's message before doing anything else."
+          : "Before generic repo exploration or boilerplate heartbeat updates, acknowledge the latest comment and explain how it changes your next action.",
         "",
         `- reason: ${normalized.reason ?? "unknown"}`,
-        `- issue: ${normalized.issue?.identifier ?? normalized.issue?.id ?? "unknown"}${normalized.issue?.title ? ` ${normalized.issue.title}` : ""}`,
-        `- pending comments: ${normalized.includedCount}/${normalized.requestedCount}`,
-        `- latest comment id: ${normalized.latestCommentId ?? "unknown"}`,
-        `- fallback fetch needed: ${normalized.fallbackFetchNeeded ? "yes" : "no"}`,
+        ...(isMeetingWake
+          ? [`- session: ${normalized.meetingSession!.sessionId}`]
+          : [
+              `- issue: ${normalized.issue?.identifier ?? normalized.issue?.id ?? "unknown"}${normalized.issue?.title ? ` ${normalized.issue.title}` : ""}`,
+              `- pending comments: ${normalized.includedCount}/${normalized.requestedCount}`,
+              `- latest comment id: ${normalized.latestCommentId ?? "unknown"}`,
+              `- fallback fetch needed: ${normalized.fallbackFetchNeeded ? "yes" : "no"}`,
+            ]),
       ];
 
   if (normalized.issue?.status) {
@@ -541,6 +556,32 @@ export function renderPaperclipWakePrompt(
       lines.push("[comment body truncated]");
     }
     lines.push("");
+  }
+
+  if (normalized.meetingSession) {
+    const { sessionId, messages } = normalized.meetingSession;
+    lines.push("## Meeting Conversation", "");
+    if (messages.length === 0) {
+      lines.push("(no messages yet)", "");
+    } else {
+      for (const msg of messages) {
+        const who = msg.authorType === "agent"
+          ? (msg.authorName ?? "agent")
+          : "user";
+        lines.push(`[${who}] ${msg.body}`, "");
+      }
+    }
+    lines.push(
+      "## How to Reply",
+      "",
+      "Post your response to the meeting chat using the agent-messages API:",
+      "```",
+      `printf '%s' '<json>' | python3 -c "$PAPERCLIP_POST_JSON" /api/companies/$PAPERCLIP_COMPANY_ID/meeting-sessions/${sessionId}/agent-messages`,
+      "```",
+      `where <json> is: {"body": "your reply here"}`,
+      "",
+      "Reply directly to the user's last message above. Be concise and conversational.",
+    );
   }
 
   return lines.join("\n").trim();
