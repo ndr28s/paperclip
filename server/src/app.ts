@@ -196,6 +196,7 @@ export async function createApp(
   api.use(sidebarBadgeRoutes(db));
   api.use(sidebarPreferenceRoutes(db));
   api.use(inboxDismissalRoutes(db));
+  api.use(meetingRoutes(db));
   api.use(instanceSettingsRoutes(db));
   api.use(agentMemoryRoutes(db));
   const hostServicesDisposers = new Map<string, () => void>();
