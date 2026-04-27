@@ -56,7 +56,17 @@
       "embedded-postgres@18.1.0-beta.16": "patches/embedded-postgres@18.1.0-beta.16.patch"
     },
     "overrides": {
-      "rollup": ">=4.59.0"
+      "rollup": ">=4.59.0",
+      "metro": "0.81.5",
+      "metro-cache-key": "0.81.5",
+      "metro-cache": "0.81.5",
+      "metro-config": "0.81.5",
+      "metro-core": "0.81.5",
+      "metro-resolver": "0.81.5",
+      "metro-runtime": "0.81.5",
+      "metro-source-map": "0.81.5",
+      "metro-transform-plugins": "0.81.5",
+      "metro-transform-worker": "0.81.5"
     }
   }
 }
