@@ -1,0 +1,59 @@
+{
+  "name": "@paperclipai/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Paperclip desktop app (Electron + React + Tamagui).",
+  "main": "./dist-electron/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder",
+    "package:win": "electron-vite build && electron-builder --win",
+    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:linux": "electron-vite build && electron-builder --linux",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@paperclipai/api-client": "workspace:*",
+    "@paperclipai/shared": "workspace:*",
+    "@paperclipai/tamagui-config": "workspace:*",
+    "@tamagui/core": "^1.135.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tamagui": "^1.135.6"
+  },
+  "devDependencies": {
+    "@tamagui/vite-plugin": "^1.135.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0"
+  },
+  "build": {
+    "appId": "ai.paperclip.desktop",
+    "productName": "Paperclip",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Office"
+    }
+  }
+}
