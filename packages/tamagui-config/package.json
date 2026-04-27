@@ -1,0 +1,23 @@
+{
+  "name": "@paperclipai/tamagui-config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@tamagui/config": "^1.135.6",
+    "@tamagui/font-inter": "^1.135.6",
+    "@tamagui/themes": "^1.135.6",
+    "tamagui": "^1.135.6"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}
