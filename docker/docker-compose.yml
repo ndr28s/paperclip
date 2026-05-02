@@ -31,6 +31,11 @@ services:
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}"
     volumes:
       - paperclip-data:/paperclip
+    extra_hosts:
+      # So adapters configured with `host.docker.internal` (e.g. openai_compatible
+      # pointing at a vLLM/Ollama/LM Studio server running on the host) resolve
+      # the host gateway. Required on Linux; harmless on Mac/Windows.
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
