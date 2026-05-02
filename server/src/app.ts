@@ -6,7 +6,7 @@ import type { Db } from "@paperclipai/db";
 import type { DeploymentExposure, DeploymentMode } from "@paperclipai/shared";
 import type { StorageService } from "./storage/types.js";
 import { httpLogger, errorHandler, encodingGuard } from "./middleware/index.js";
-import { actorMiddleware } from "./middleware/auth.js";
+import { actorMiddlewareWithMobileSessionFallback as actorMiddleware } from "./middleware/auth.js";
 import { boardMutationGuard } from "./middleware/board-mutation-guard.js";
 import { privateHostnameGuard, resolvePrivateHostnameAllowSet } from "./middleware/private-hostname-guard.js";
 import { healthRoutes } from "./routes/health.js";
@@ -272,6 +272,19 @@ export async function createApp(
       allowedHostnames: opts.allowedHostnames,
     }),
   );
+  // Serve desktop app update files
+  // Use import.meta.url so this works regardless of process.cwd() (monorepo root vs server dir)
+  const __dirnameForUpdates = path.dirname(fileURLToPath(import.meta.url));
+  const updatesDirCandidates = [
+    path.join(__dirnameForUpdates, "../updates"),   // src/ → server/updates/  (dev)
+    path.join(__dirnameForUpdates, "../../updates"), // dist/ → server/updates/ (prod)
+    path.join(process.cwd(), "updates"),             // fallback: cwd/updates
+  ];
+  const updatesDir = updatesDirCandidates.find((d) => fs.existsSync(d));
+  if (updatesDir) {
+    app.use("/api/updates", express.static(updatesDir));
+  }
+
   app.use("/api", api);
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "API route not found" });

@@ -186,6 +186,72 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
     };
 
     next();
+    return;
+
+    // NOTE: unreachable — kept here to satisfy TypeScript control flow.
+  };
+}
+
+// ── Mobile Bearer-token session fallback ──────────────────────────────────────
+// When a Better Auth session token is used as a Bearer token (React Native
+// can't persist HTTP-only cookies across restarts), the board/agent key lookup
+// above won't find it. We re-export a wrapper that tries resolveSession last.
+export function actorMiddlewareWithMobileSessionFallback(
+  db: Db,
+  opts: ActorMiddlewareOptions,
+): RequestHandler {
+  const base = actorMiddleware(db, opts);
+  return async (req, res, next) => {
+    await new Promise<void>((resolve) => base(req, res, () => resolve()));
+
+    // If actor is already identified, nothing more to do.
+    if (req.actor.type !== "none") {
+      next();
+      return;
+    }
+
+    // Bearer token present but unrecognised as board/agent key — try Better Auth.
+    const authHeader = req.header("authorization");
+    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
+      next();
+      return;
+    }
+
+    try {
+      const session = await opts.resolveSession?.(req);
+      if (session?.user?.id) {
+        const userId = session.user.id;
+        const { instanceUserRoles: iur, companyMemberships: cm } = await import("@paperclipai/db").then(
+          (m) => ({ instanceUserRoles: m.instanceUserRoles, companyMemberships: m.companyMemberships }),
+        );
+        const { and: dbAnd, eq: dbEq } = await import("drizzle-orm");
+        const [roleRow, memberships] = await Promise.all([
+          db
+            .select({ id: iur.id })
+            .from(iur)
+            .where(dbAnd(dbEq(iur.userId, userId), dbEq(iur.role, "instance_admin")))
+            .then((rows) => rows[0] ?? null),
+          db
+            .select({ companyId: cm.companyId, membershipRole: cm.membershipRole, status: cm.status })
+            .from(cm)
+            .where(dbAnd(dbEq(cm.principalType, "user"), dbEq(cm.principalId, userId), dbEq(cm.status, "active"))),
+        ]);
+        req.actor = {
+          type: "board",
+          userId,
+          userName: session.user.name ?? null,
+          userEmail: session.user.email ?? null,
+          companyIds: memberships.map((r) => r.companyId),
+          memberships,
+          isInstanceAdmin: Boolean(roleRow),
+          source: "session",
+        };
+      }
+    } catch (err) {
+      logger.warn({ err }, "Mobile session Bearer fallback failed");
+    }
+
+    next();
   };
 }
 

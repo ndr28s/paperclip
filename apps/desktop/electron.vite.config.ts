@@ -30,6 +30,16 @@ export default defineConfig({
         input: path.resolve(__dirname, "index.html"),
       },
     },
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://localhost:3100",
+          changeOrigin: true,
+          cookieDomainRewrite: { "*": "" },
+          cookiePathRewrite: { "*": "/" },
+        },
+      },
+    },
     plugins: [
       react(),
       tamaguiPlugin({

@@ -112,6 +112,14 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins?
 export function createBetterAuthHandler(auth: BetterAuthInstance): RequestHandler {
   const handler = toNodeHandler(auth);
   return (req, res, next) => {
+    // Mobile apps (React Native) don't send an Origin header.
+    // Better Auth rejects requests with missing/null Origin.
+    // Inject the host-derived origin so mobile sign-in works.
+    if (!req.headers.origin || req.headers.origin === "null") {
+      const host = req.headers.host ?? "localhost";
+      const proto = (req.socket as { encrypted?: boolean }).encrypted ? "https" : "http";
+      req.headers.origin = `${proto}://${host}`;
+    }
     void Promise.resolve(handler(req, res)).catch(next);
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "@paperclipai/desktop",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "private": true,
   "description": "Paperclip desktop app (Electron + React + Tamagui).",
   "main": "./dist-electron/main.js",
@@ -9,7 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "package": "electron-vite build && electron-builder",
-    "package:win": "electron-vite build && electron-builder --win",
+    "package:win": "electron-vite build && electron-builder --win --publish always && node scripts/copy-updates.mjs",
     "package:mac": "electron-vite build && electron-builder --mac",
     "package:linux": "electron-vite build && electron-builder --linux",
     "typecheck": "tsc --noEmit"
@@ -19,6 +19,7 @@
     "@paperclipai/shared": "workspace:*",
     "@paperclipai/tamagui-config": "workspace:*",
     "@tamagui/core": "^1.135.6",
+    "electron-updater": "^6.8.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tamagui": "^1.135.6"
@@ -37,6 +38,11 @@
   "build": {
     "appId": "ai.paperclip.desktop",
     "productName": "Paperclip",
+    "electronVersion": "33.4.11",
+    "publish": {
+      "provider": "generic",
+      "url": "http://100.79.84.66:3100/api/updates"
+    },
     "directories": {
       "output": "release"
     },

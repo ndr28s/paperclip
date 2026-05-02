@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
+import { eq, or, like } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { authUsers } from "@paperclipai/db";
 import {
@@ -36,6 +36,33 @@ async function loadCurrentUserProfile(db: Db, userId: string) {
 
 export function authRoutes(db: Db) {
   const router = Router();
+
+  // Lookup email by username (email prefix or display name) — for ID-based login
+  router.post("/lookup-by-username", async (req, res) => {
+    const { username } = req.body as { username?: string };
+    if (!username || typeof username !== "string" || !username.trim()) {
+      res.status(400).json({ error: "username required" });
+      return;
+    }
+    const trimmed = username.trim().toLowerCase();
+    const user = await db
+      .select({ email: authUsers.email })
+      .from(authUsers)
+      .where(
+        or(
+          like(authUsers.email, `${trimmed}@%`),
+          eq(authUsers.name, username.trim()),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null);
+
+    if (!user?.email) {
+      res.status(404).json({ error: "아이디를 찾을 수 없습니다." });
+      return;
+    }
+    res.json({ email: user.email });
+  });
 
   router.get("/get-session", async (req, res) => {
     if (req.actor.type !== "board" || !req.actor.userId) {

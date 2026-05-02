@@ -35,10 +35,18 @@ function trustedOriginsForRequest(req: Request) {
 
 function isTrustedBoardMutationRequest(req: Request) {
   const allowedOrigins = trustedOriginsForRequest(req);
-  const origin = parseOrigin(req.header("origin"));
-  if (origin && allowedOrigins.has(origin)) return true;
+  const originHeader = req.header("origin");
+  const origin = parseOrigin(originHeader);
 
+  // No origin header (or literal "null") means the request came from a
+  // non-browser client — e.g. the Electron desktop app, a mobile app, or
+  // a CLI tool.  These clients cannot be CSRF-attacked via a malicious web
+  // page, so we allow the mutation when neither Origin nor Referer is set.
+  const hasNoOrigin = !originHeader || originHeader.trim().toLowerCase() === "null";
   const refererOrigin = parseOrigin(req.header("referer"));
+  if (hasNoOrigin && !refererOrigin) return true;
+
+  if (origin && allowedOrigins.has(origin)) return true;
   if (refererOrigin && allowedOrigins.has(refererOrigin)) return true;
 
   return false;
