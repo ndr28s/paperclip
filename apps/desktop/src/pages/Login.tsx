@@ -7,7 +7,7 @@ interface LoginProps {
 
 export function Login({ onLogin }: LoginProps) {
   const [serverUrl, setServerUrl] = useState(
-    () => localStorage.getItem("paperclip_server_url") || "http://100.79.84.66:3100"
+    () => localStorage.getItem("paperclip_server_url") || "http://localhost:3100"
   );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -112,7 +112,7 @@ export function Login({ onLogin }: LoginProps) {
               <input
                 type="text"
                 autoComplete="off"
-                placeholder="http://100.79.84.66:3100"
+                placeholder="http://192.168.0.x:3100"
                 value={serverUrl}
                 onChange={e => setServerUrl(e.target.value)}
                 style={{

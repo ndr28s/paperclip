@@ -23,6 +23,12 @@ export function Sidebar({ active, onNavigate, onCreateOrgRequest, onCompanyCreat
   const { data: session } = useActiveSession(companyId);
 
   const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
+  const [serverUrlOpen, setServerUrlOpen] = useState(false);
+  const [serverUrlInput, setServerUrlInput] = useState(
+    () => localStorage.getItem("paperclip_server_url") || "http://localhost:3100"
+  );
+
+  const isPackaged = typeof window !== "undefined" && (window as Window & { paperclip?: { isPackaged?: boolean } }).paperclip?.isPackaged === true;
 
   async function handleDeleteCompany(e: React.MouseEvent, id: string, name: string) {
     e.stopPropagation();
@@ -182,8 +188,80 @@ export function Sidebar({ active, onNavigate, onCreateOrgRequest, onCompanyCreat
             {user?.email ?? ""}
           </div>
         </div>
-        <button className="tb-btn" style={{ padding: "0 6px" }}><Icon name="more" size={12} /></button>
+        {isPackaged && (
+          <button
+            className="tb-btn"
+            style={{ padding: "0 6px" }}
+            title="서버 주소 변경"
+            onClick={() => {
+              setServerUrlInput(localStorage.getItem("paperclip_server_url") || "http://localhost:3100");
+              setServerUrlOpen(true);
+            }}
+          >
+            <Icon name="more" size={12} />
+          </button>
+        )}
       </div>
+
+      {/* 서버 주소 변경 모달 */}
+      {serverUrlOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} onClick={() => setServerUrlOpen(false)} />
+          <div style={{
+            position: "relative", zIndex: 1, background: "var(--bg-1)",
+            border: "1px solid var(--border-1)", borderRadius: 12,
+            padding: "24px", width: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+          }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 15, fontWeight: 700, color: "var(--fg-0)" }}>서버 주소 변경</h3>
+            <p style={{ margin: "0 0 16px", fontSize: 12, color: "var(--fg-2)", lineHeight: 1.5 }}>
+              Paperclip 서버의 주소를 변경합니다. 변경 후 앱이 재연결됩니다.
+            </p>
+            <label style={{ display: "block", fontSize: 12, color: "var(--fg-2)", marginBottom: 12 }}>
+              서버 주소
+              <input
+                type="text"
+                autoFocus
+                value={serverUrlInput}
+                onChange={e => setServerUrlInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    const url = serverUrlInput.trim().replace(/\/$/, "");
+                    if (url) { localStorage.setItem("paperclip_server_url", url); window.location.reload(); }
+                  }
+                  if (e.key === "Escape") setServerUrlOpen(false);
+                }}
+                placeholder="http://192.168.0.x:3100"
+                style={{
+                  display: "block", width: "100%", marginTop: 6,
+                  background: "var(--bg-2)", border: "1px solid var(--border-1)",
+                  borderRadius: 7, padding: "9px 12px", color: "var(--fg-0)",
+                  fontSize: 13, boxSizing: "border-box", outline: "none",
+                }}
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setServerUrlOpen(false)}
+                style={{ padding: "8px 16px", borderRadius: 7, border: "1px solid var(--border-1)", background: "transparent", color: "var(--fg-2)", fontSize: 13, cursor: "pointer" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  const url = serverUrlInput.trim().replace(/\/$/, "");
+                  if (!url) return;
+                  localStorage.setItem("paperclip_server_url", url);
+                  window.location.reload();
+                }}
+                disabled={!serverUrlInput.trim()}
+                style={{ padding: "8px 20px", borderRadius: 7, border: "none", background: "var(--accent)", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                저장 후 재연결
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
