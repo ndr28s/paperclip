@@ -24,6 +24,14 @@ fi
 
 if [ "$changed" = "1" ]; then
     chown -R node:node /paperclip
+else
+    # Even when UID/GID matched, files inside /paperclip may be owned by root
+    # if `docker compose exec` (which defaults to root) created them. Fix any
+    # mismatched entries so the node process can write to data/run-logs etc.
+    if find /paperclip ! -user node -print -quit 2>/dev/null | grep -q .; then
+        echo "Fixing /paperclip ownership for node user"
+        chown -R node:node /paperclip
+    fi
 fi
 
 exec gosu node "$@"
