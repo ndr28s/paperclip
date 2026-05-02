@@ -1,0 +1,29 @@
+# Cloudflare Tunnel 오버레이
+#
+# [Quick Tunnel] 설정 없이 즉시 사용 (URL 매번 변경):
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tunnel.yml up -d
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tunnel.yml logs cloudflared
+#   → 로그에서 https://xxxx.trycloudflare.com URL 확인
+#
+# [Named Tunnel] URL 고정 (Cloudflare 계정 필요):
+#   CLOUDFLARE_TUNNEL_TOKEN=eyJ... \
+#   PAPERCLIP_PUBLIC_URL=https://your-name.yourdomain.com \
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tunnel.yml up -d
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    entrypoint: []
+    command: >
+      sh -c '
+        if [ -n "$$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+          exec cloudflared tunnel --no-autoupdate run --token $$CLOUDFLARE_TUNNEL_TOKEN
+        else
+          exec cloudflared tunnel --no-autoupdate --url http://server:3100
+        fi
+      '
+    environment:
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - server

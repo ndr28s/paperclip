@@ -10,10 +10,11 @@
 2. [방법 A: Docker Compose (권장)](#방법-a-docker-compose-권장)
 3. [방법 B: 직접 설치](#방법-b-직접-설치)
 4. [Ollama 로컬 LLM 연결](#ollama-로컬-llm-연결)
-5. [Electron 앱 / Android 앱 연결](#electron-앱--android-앱-연결)
-6. [systemd 서비스 등록 (자동 시작)](#systemd-서비스-등록-자동-시작)
-7. [방화벽 설정](#방화벽-설정)
-8. [트러블슈팅](#트러블슈팅)
+5. [Cloudflare Tunnel로 외부 접속](#cloudflare-tunnel로-외부-접속)
+6. [Electron 앱 / Android 앱 연결](#electron-앱--android-앱-연결)
+7. [systemd 서비스 등록 (자동 시작)](#systemd-서비스-등록-자동-시작)
+8. [방화벽 설정](#방화벽-설정)
+9. [트러블슈팅](#트러블슈팅)
 
 ---
 
@@ -269,6 +270,111 @@ ollama list
 2. 에이전트 생성 또는 선택
 3. Adapter: 방금 추가한 **opencode_local** 선택
 4. 저장
+
+---
+
+## Cloudflare Tunnel로 외부 접속
+
+포트 개방이나 공인 IP 없이 인터넷 어디서나 접속할 수 있게 합니다.
+
+### Quick Tunnel (즉시 사용, URL 매번 변경)
+
+도메인·계정 없이 바로 사용 가능합니다. 단, 재시작할 때마다 URL이 바뀝니다.
+
+#### cloudflared 설치
+
+```bash
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+  -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+cloudflared --version
+```
+
+#### Docker Compose로 실행
+
+```bash
+# Paperclip + Quick Tunnel 함께 시작
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.tunnel.yml up -d
+
+# 터널 URL 확인 (logs에서 https://xxxx.trycloudflare.com 찾기)
+docker compose -f docker/docker-compose.tunnel.yml logs cloudflared
+```
+
+출력 예시:
+```
+cloudflared  | Your quick Tunnel has been created! Visit it at:
+cloudflared  | https://banana-windows-cheese-abc.trycloudflare.com
+```
+
+이 URL을 Electron 앱 / Android 앱의 서버 주소로 설정합니다.
+
+#### 직접 설치 방식으로 실행
+
+```bash
+chmod +x scripts/start-tunnel.sh
+./scripts/start-tunnel.sh
+```
+
+---
+
+### Named Tunnel (URL 고정, Cloudflare 계정 + 도메인 필요)
+
+재시작해도 URL이 바뀌지 않아 앱 설정을 한 번만 하면 됩니다.
+
+> **필요 조건:** Cloudflare 계정(무료) + Cloudflare에 등록된 도메인
+
+#### 1. 로그인 및 터널 생성
+
+```bash
+cloudflared login          # 브라우저 인증 (서버에 GUI 없으면 URL 복사해서 로컬에서 인증)
+cloudflared tunnel create paperclip
+cloudflared tunnel list    # 생성된 터널 ID 확인
+```
+
+#### 2. DNS 레코드 연결
+
+```bash
+# paperclip.yourdomain.com → 터널로 연결
+cloudflared tunnel route dns paperclip paperclip.yourdomain.com
+```
+
+#### 3. 터널 토큰 발급
+
+```bash
+cloudflared tunnel token paperclip
+# 출력된 토큰(eyJ...) 복사
+```
+
+#### 4. 실행
+
+```bash
+# Docker Compose
+CLOUDFLARE_TUNNEL_TOKEN=eyJ... \
+PAPERCLIP_PUBLIC_URL=https://paperclip.yourdomain.com \
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.tunnel.yml up -d
+
+# 직접 설치 방식
+CLOUDFLARE_TUNNEL_TOKEN=eyJ... ./scripts/start-tunnel.sh
+```
+
+#### 5. .env에 저장 (편의)
+
+```bash
+echo "CLOUDFLARE_TUNNEL_TOKEN=eyJ..." >> .env
+echo "PAPERCLIP_PUBLIC_URL=https://paperclip.yourdomain.com" >> .env
+```
+
+---
+
+### 방식 비교
+
+| | Quick Tunnel | Named Tunnel |
+|---|---|---|
+| 계정 필요 | ❌ 불필요 | ✅ 무료 계정 |
+| 도메인 필요 | ❌ 불필요 | ✅ 필요 |
+| URL 고정 | ❌ 매번 변경 | ✅ 고정 |
+| 설정 난이도 | 매우 쉬움 | 보통 |
+| 용도 | 테스트 / 임시 | 실사용 권장 |
 
 ---
 
