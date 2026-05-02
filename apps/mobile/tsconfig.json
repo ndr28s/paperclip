@@ -7,10 +7,8 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "paths": {
-      "react": ["./node_modules/react"],
-      "@types/react": ["./node_modules/@types/react"]
-    }
+    "typeRoots": ["./node_modules/@types", "../../node_modules/@types"],
+    "types": ["react"]
   },
   "include": ["App.tsx", "index.ts", "src", "**/*.ts", "**/*.tsx"]
 }
