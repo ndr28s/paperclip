@@ -8,6 +8,7 @@
 import type { ComponentType } from "react";
 import {
   Bot,
+  Cloud,
   Code,
   Gem,
   MousePointer2,
@@ -95,6 +96,11 @@ const adapterDisplayMap: Record<string, AdapterDisplayInfo> = {
     icon: Bot,
     comingSoon: true,
     disabledLabel: "Configure OpenClaw within the App",
+  },
+  openai_compatible: {
+    label: "OpenAI-compatible API",
+    description: "vLLM, Ollama, LM Studio, or any OpenAI-compatible endpoint",
+    icon: Cloud,
   },
   process: {
     label: "Process",

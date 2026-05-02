@@ -77,6 +77,16 @@ import {
   detectModel as detectModelFromHermes,
 } from "hermes-paperclip-adapter/server";
 import {
+  execute as openAiCompatibleExecute,
+  testEnvironment as openAiCompatibleTestEnvironment,
+  listOpenAiCompatibleModels,
+} from "@paperclipai/adapter-openai-compatible/server";
+import {
+  agentConfigurationDoc as openAiCompatibleAgentConfigurationDoc,
+  DEFAULT_BASE_URL as OPENAI_COMPATIBLE_DEFAULT_BASE_URL,
+  DEFAULT_MODEL as OPENAI_COMPATIBLE_DEFAULT_MODEL,
+} from "@paperclipai/adapter-openai-compatible";
+import {
   agentConfigurationDoc as hermesAgentConfigurationDoc,
   models as hermesModels,
 } from "hermes-paperclip-adapter";
@@ -387,6 +397,73 @@ const hermesLocalAdapter: ServerAdapterModule = {
   },
 };
 
+const openAiCompatibleAdapter: ServerAdapterModule = {
+  type: "openai_compatible",
+  execute: openAiCompatibleExecute,
+  testEnvironment: openAiCompatibleTestEnvironment,
+  listModels: () => listOpenAiCompatibleModels(),
+  models: [],
+  supportsLocalAgentJwt: false,
+  supportsInstructionsBundle: false,
+  requiresMaterializedRuntimeSkills: false,
+  agentConfigurationDoc: openAiCompatibleAgentConfigurationDoc,
+  getConfigSchema() {
+    return {
+      fields: [
+        {
+          key: "baseUrl",
+          label: "Base URL",
+          type: "text",
+          default: OPENAI_COMPATIBLE_DEFAULT_BASE_URL,
+          required: true,
+          hint: "OpenAI-compatible base URL. vLLM: http://localhost:8000/v1, Ollama: http://localhost:11434/v1, LM Studio: http://localhost:1234/v1",
+          group: "Endpoint",
+        },
+        {
+          key: "model",
+          label: "Model",
+          type: "text",
+          default: OPENAI_COMPATIBLE_DEFAULT_MODEL,
+          required: true,
+          hint: "Model id served by the endpoint. Run `curl <baseUrl>/models` to discover available ids.",
+          group: "Endpoint",
+        },
+        {
+          key: "apiKey",
+          label: "API key",
+          type: "text",
+          hint: "Optional bearer token. Sent as `Authorization: Bearer <key>`. Leave blank for unauthenticated local servers.",
+          group: "Endpoint",
+        },
+        {
+          key: "timeoutSec",
+          label: "Timeout (sec)",
+          type: "number",
+          default: 120,
+          hint: "Request timeout for /chat/completions.",
+          group: "Advanced",
+        },
+        {
+          key: "temperature",
+          label: "Temperature",
+          type: "number",
+          default: 0.7,
+          hint: "Sampling temperature (0–2). Set to 0 for deterministic output.",
+          group: "Advanced",
+        },
+        {
+          key: "maxTokens",
+          label: "Max tokens",
+          type: "number",
+          default: 0,
+          hint: "Maximum tokens to generate. 0 = let the server decide.",
+          group: "Advanced",
+        },
+      ],
+    };
+  },
+};
+
 const adaptersByType = new Map<string, ServerAdapterModule>();
 
 // For builtin types that are overridden by an external adapter, we keep the
@@ -408,6 +485,7 @@ function registerBuiltInAdapters() {
     geminiLocalAdapter,
     openclawGatewayAdapter,
     hermesLocalAdapter,
+    openAiCompatibleAdapter,
     processAdapter,
     httpAdapter,
   ]) {
