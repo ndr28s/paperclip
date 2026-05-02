@@ -11,10 +11,11 @@
 3. [방법 B: 직접 설치](#방법-b-직접-설치)
 4. [Ollama 로컬 LLM 연결](#ollama-로컬-llm-연결)
 5. [Cloudflare Tunnel로 외부 접속](#cloudflare-tunnel로-외부-접속)
-6. [Electron 앱 / Android 앱 연결](#electron-앱--android-앱-연결)
-7. [systemd 서비스 등록 (자동 시작)](#systemd-서비스-등록-자동-시작)
-8. [방화벽 설정](#방화벽-설정)
-9. [트러블슈팅](#트러블슈팅)
+6. [첫 계정 생성](#첫-계정-생성)
+7. [Electron 앱 / Android 앱 연결](#electron-앱--android-앱-연결)
+8. [systemd 서비스 등록 (자동 시작)](#systemd-서비스-등록-자동-시작)
+9. [방화벽 설정](#방화벽-설정)
+10. [트러블슈팅](#트러블슈팅)
 
 ---
 
@@ -308,6 +309,27 @@ cloudflared  | https://banana-windows-cheese-abc.trycloudflare.com
 
 이 URL을 Electron 앱 / Android 앱의 서버 주소로 설정합니다.
 
+#### ⚠️ Quick Tunnel URL 변경 시 (재시작마다 필요)
+
+Quick Tunnel은 서버를 재시작할 때마다 URL이 새로 발급됩니다. URL이 바뀌면 아래 순서로 업데이트합니다.
+
+```bash
+cd paperclip
+
+# 1. 새 URL 확인
+docker compose -f docker/docker-compose.tunnel.yml logs cloudflared 2>&1 | grep trycloudflare
+
+# 2. .env 업데이트 (새 URL로 교체)
+sed -i 's|PAPERCLIP_PUBLIC_URL=.*|PAPERCLIP_PUBLIC_URL=https://새URL.trycloudflare.com|' .env
+
+# 3. 서버 재시작 (터널은 그대로)
+docker compose -f docker/docker-compose.yml restart server
+```
+
+그다음 Electron 앱 로그인 화면 또는 사이드바 **⋯ 버튼**에서 서버 주소를 새 URL로 변경하면 됩니다.
+
+> URL이 자주 바뀌는 게 불편하다면 [Named Tunnel](#named-tunnel-url-고정-cloudflare-계정--도메인-필요) 사용을 권장합니다.
+
 #### 직접 설치 방식으로 실행
 
 ```bash
@@ -375,6 +397,31 @@ echo "PAPERCLIP_PUBLIC_URL=https://paperclip.yourdomain.com" >> .env
 | URL 고정 | ❌ 매번 변경 | ✅ 고정 |
 | 설정 난이도 | 매우 쉬움 | 보통 |
 | 용도 | 테스트 / 임시 | 실사용 권장 |
+
+---
+
+## 첫 계정 생성
+
+서버가 처음 실행되면 계정이 없는 상태입니다. Electron 앱 또는 브라우저에서 직접 가입합니다.
+
+### Electron 앱에서 가입
+
+1. 앱 실행 → 로그인 화면
+2. 서버 주소 입력 (로컬 IP 또는 Cloudflare 터널 URL)
+3. **회원가입** 탭 클릭
+4. 이름, 이메일, 비밀번호 입력 후 **가입하기**
+5. 가입 완료 후 자동으로 로그인됩니다
+
+### 브라우저에서 가입
+
+```
+http://<서버IP>:3100   또는
+https://xxxx.trycloudflare.com
+```
+
+로 접속하면 동일한 로그인/회원가입 화면이 표시됩니다.
+
+> **비밀번호 규칙:** 8자 이상
 
 ---
 
@@ -527,6 +574,20 @@ node --version
 pnpm store prune
 pnpm install --force
 pnpm build
+```
+
+### 터널 URL로 접속했는데 로그인이 안 되는 경우
+
+Better Auth가 쿠키 도메인을 `PAPERCLIP_PUBLIC_URL` 기준으로 설정합니다.
+터널 URL과 `.env`의 `PAPERCLIP_PUBLIC_URL`이 일치해야 합니다.
+
+```bash
+# 현재 설정 확인
+grep PAPERCLIP_PUBLIC_URL .env
+
+# 터널 URL과 다르면 업데이트 후 서버 재시작
+sed -i 's|PAPERCLIP_PUBLIC_URL=.*|PAPERCLIP_PUBLIC_URL=https://xxxx.trycloudflare.com|' .env
+docker compose -f docker/docker-compose.yml restart server
 ```
 
 ### 데이터베이스 마이그레이션 오류
