@@ -29,7 +29,7 @@ export function Login({ onLogin }: LoginProps) {
 
   // 회원가입 상태
   const [signupName, setSignupName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
+  const [signupUsername, setSignupUsername] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
 
@@ -89,7 +89,7 @@ export function Login({ onLogin }: LoginProps) {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
-    if (!signupName.trim() || !signupEmail.trim() || !signupPassword) return;
+    if (!signupName.trim() || !signupUsername.trim() || !signupPassword) return;
     if (signupPassword !== signupPasswordConfirm) {
       setError("비밀번호가 일치하지 않습니다.");
       return;
@@ -105,13 +105,15 @@ export function Login({ onLogin }: LoginProps) {
       saveServerUrl();
       const baseUrl = getBaseUrl();
 
+      const generatedEmail = signupUsername.includes("@") ? signupUsername : `${signupUsername}@paperclip.local`;
+
       const res = await fetch(`${baseUrl}/auth/sign-up/email`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: signupName.trim(),
-          email: signupEmail.trim(),
+          email: generatedEmail,
           password: signupPassword,
         }),
       });
@@ -124,14 +126,14 @@ export function Login({ onLogin }: LoginProps) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: signupEmail.trim(), password: signupPassword }),
+        body: JSON.stringify({ email: generatedEmail, password: signupPassword }),
       });
       if (loginRes.ok) {
         onLogin();
       } else {
         setSuccess("가입 완료! 로그인해주세요.");
         setMode("login");
-        setLoginUsername(signupEmail.trim());
+        setLoginUsername(signupUsername.trim());
       }
     } catch (err) {
       setError((err as Error).message);
@@ -263,11 +265,11 @@ export function Login({ onLogin }: LoginProps) {
               />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 12, color: "var(--fg-2)", marginBottom: 5 }}>이메일</label>
+              <label style={{ display: "block", fontSize: 12, color: "var(--fg-2)", marginBottom: 5 }}>아이디</label>
               <input
-                type="email" autoComplete="email"
-                placeholder="me@example.com"
-                value={signupEmail} onChange={e => setSignupEmail(e.target.value)}
+                type="text" autoComplete="username"
+                placeholder="my_username"
+                value={signupUsername} onChange={e => setSignupUsername(e.target.value)}
                 style={inputStyle}
               />
             </div>
@@ -296,8 +298,8 @@ export function Login({ onLogin }: LoginProps) {
             {error && <ErrorBox msg={error} />}
             <button
               type="submit"
-              disabled={loading || !signupName.trim() || !signupEmail.trim() || !signupPassword || !signupPasswordConfirm}
-              style={submitStyle(loading || !signupName.trim() || !signupEmail.trim() || !signupPassword || !signupPasswordConfirm)}
+              disabled={loading || !signupName.trim() || !signupUsername.trim() || !signupPassword || !signupPasswordConfirm}
+              style={submitStyle(loading || !signupName.trim() || !signupUsername.trim() || !signupPassword || !signupPasswordConfirm)}
             >
               {loading ? "가입 중…" : "가입하기"}
             </button>

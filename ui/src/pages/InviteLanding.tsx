@@ -63,16 +63,16 @@ function getAuthErrorMessage(error: unknown) {
 function mapInviteAuthFeedback(
   error: unknown,
   authMode: AuthMode,
-  email: string,
+  username: string,
 ): AuthFeedback {
   const code = getAuthErrorCode(error);
   const message = getAuthErrorMessage(error);
-  const emailLabel = email.trim().length > 0 ? email.trim() : "that email";
+  const usernameLabel = username.trim().length > 0 ? username.trim() : "that 아이디";
 
   if (code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
     return {
       tone: "info",
-      message: `An account already exists for ${emailLabel}. Sign in below to continue with this invite.`,
+      message: `${usernameLabel} 아이디로 이미 계정이 존재합니다. 아래에서 로그인하여 초대를 계속 진행하세요.`,
     };
   }
 
@@ -80,7 +80,14 @@ function mapInviteAuthFeedback(
     return {
       tone: "error",
       message:
-        "That email and password did not match an existing Paperclip account. Check both fields, or create an account first if you are new here.",
+        "아이디와 비밀번호가 일치하지 않습니다. 두 항목을 확인하거나, 처음 사용하시는 경우 계정을 먼저 만드세요.",
+    };
+  }
+
+  if (code === "ID_NOT_FOUND") {
+    return {
+      tone: "error",
+      message: message ?? "아이디를 찾을 수 없습니다.",
     };
   }
 
@@ -88,14 +95,14 @@ function mapInviteAuthFeedback(
     return {
       tone: "error",
       message:
-        "That email and password did not match an existing Paperclip account. Check both fields, or create an account first if you are new here.",
+        "아이디와 비밀번호가 일치하지 않습니다. 두 항목을 확인하거나, 처음 사용하시는 경우 계정을 먼저 만드세요.",
     };
   }
 
   if (authMode === "sign_up" && message === "Request failed: 422") {
     return {
       tone: "info",
-      message: `An account may already exist for ${emailLabel}. Try signing in instead.`,
+      message: `${usernameLabel} 아이디로 이미 계정이 있을 수 있습니다. 로그인을 시도해보세요.`,
     };
   }
 
@@ -220,7 +227,7 @@ export function InviteLandingPage() {
   const token = (params.token ?? "").trim();
   const [authMode, setAuthMode] = useState<AuthMode>("sign_up");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [agentName, setAgentName] = useState("");
   const [adapterType, setAdapterType] = useState<AgentAdapterType>("claude_local");
@@ -312,7 +319,7 @@ export function InviteLandingPage() {
     "this account";
 
   const authCanSubmit =
-    email.trim().length > 0 &&
+    username.trim().length > 0 &&
     password.trim().length > 0 &&
     (authMode === "sign_in" || (name.trim().length > 0 && password.trim().length >= 8));
 
@@ -361,13 +368,31 @@ export function InviteLandingPage() {
 
   const authMutation = useMutation({
     mutationFn: async () => {
+      const usernameVal = username.trim();
       if (authMode === "sign_in") {
-        await authApi.signInEmail({ email: email.trim(), password });
+        // Look up email from username
+        let resolvedEmail = usernameVal;
+        if (!usernameVal.includes("@")) {
+          const res = await fetch("/api/auth/lookup-by-username", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: usernameVal }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw Object.assign(new Error(data.error || "아이디를 찾을 수 없습니다."), { code: "ID_NOT_FOUND" });
+          }
+          resolvedEmail = (await res.json()).email;
+        }
+        await authApi.signInEmail({ email: resolvedEmail, password });
         return;
       }
+      // sign_up: generate email from username
+      const generatedEmail = usernameVal.includes("@") ? usernameVal : `${usernameVal}@paperclip.local`;
       await authApi.signUpEmail({
-        name: name.trim(),
-        email: email.trim(),
+        name: name.trim() || usernameVal,
+        email: generatedEmail,
         password,
       });
     },
@@ -402,7 +427,7 @@ export function InviteLandingPage() {
       }
     },
     onError: (err) => {
-      const nextFeedback = mapInviteAuthFeedback(err, authMode, email);
+      const nextFeedback = mapInviteAuthFeedback(err, authMode, username);
       if (getAuthErrorCode(err) === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
         setAuthMode("sign_in");
         setPassword("");
@@ -726,17 +751,17 @@ export function InviteLandingPage() {
                     </label>
                   ) : null}
                   <label className="block text-sm">
-                    <span className="mb-1 block text-zinc-400">Email</span>
+                    <span className="mb-1 block text-zinc-400">아이디</span>
                     <input
-                      name="email"
-                      type="email"
+                      name="username"
+                      type="text"
                       className={fieldClassName}
-                      value={email}
+                      value={username}
                       onChange={(event) => {
-                        setEmail(event.target.value);
+                        setUsername(event.target.value);
                         setAuthFeedback(null);
                       }}
-                      autoComplete="email"
+                      autoComplete="username"
                       autoFocus={authMode === "sign_in"}
                     />
                   </label>
