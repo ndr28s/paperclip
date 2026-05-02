@@ -136,10 +136,14 @@ git clone <your-repo-url> paperclip
 cd paperclip
 
 pnpm install
-pnpm build
+pnpm --filter @paperclipai/server... build
+pnpm --filter @paperclipai/ui build
 ```
 
 > 빌드는 처음 한 번만 필요합니다. 약 3~5분 소요됩니다.
+>
+> `pnpm build`(전체 워크스페이스 빌드)는 `apps/desktop`이 별도의 electron 의존성을 요구해 서버 운영 환경에서는 실패합니다.
+> 위 두 단계(`server` + 그 의존 패키지, `ui`)만 빌드하면 서버 + UI prod 모드 운영에 충분합니다.
 
 ### 5. PostgreSQL 설치 (선택 — 내장 DB 사용 시 생략)
 
@@ -174,16 +178,19 @@ EOF
 ### 7. 서버 실행
 
 ```bash
-cd paperclip/server
-node -r dotenv/config dist/index.js
-```
-
-또는 루트에서:
-
-```bash
 cd paperclip
-node -e "require('dotenv').config(); require('./server/dist/index.js')"
+set -a; source .env; set +a
+NODE_ENV=production HOST=127.0.0.1 PORT=3100 SERVE_UI=true \
+  node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js
 ```
+
+> Paperclip은 prod 빌드에서도 워크스페이스 패키지(`@paperclipai/db` 등)의 `exports`가
+> `.ts` source를 가리키도록 설계되어 있어, plain `node`만으로는 `.ts`를 import할 수 없습니다.
+> 따라서 prod 실행 시 반드시 `--import .../tsx/dist/loader.mjs` 로 tsx loader를 함께 로드해야 합니다.
+> (Dockerfile의 `CMD`와 동일 패턴)
+>
+> `set -a; source .env; set +a`는 `.env`의 모든 키를 자식 프로세스 env로 export하는 패턴입니다.
+> `dotenv` 모듈은 root에 설치되어 있지 않으므로 위 방법을 사용합니다.
 
 브라우저에서 `http://<서버IP>:3100` 접속 확인.
 
