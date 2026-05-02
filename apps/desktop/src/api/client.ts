@@ -6,7 +6,8 @@ export function getBaseUrl(): string {
   // In production Electron, read from localStorage or default
   if (typeof window !== "undefined" && window.paperclip?.isPackaged === true) {
     const stored = localStorage.getItem("paperclip_server_url");
-    return stored ? `${stored}/api` : "/api";
+    const cleaned = stored?.replace(/\/+$/, "") ?? "";
+    return cleaned ? `${cleaned}/api` : "/api";
   }
   return "/api";
 }
