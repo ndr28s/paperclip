@@ -403,7 +403,7 @@ const openAiCompatibleAdapter: ServerAdapterModule = {
   testEnvironment: openAiCompatibleTestEnvironment,
   listModels: () => listOpenAiCompatibleModels(),
   models: [],
-  supportsLocalAgentJwt: false,
+  supportsLocalAgentJwt: true,
   supportsInstructionsBundle: false,
   requiresMaterializedRuntimeSkills: false,
   agentConfigurationDoc: openAiCompatibleAgentConfigurationDoc,
