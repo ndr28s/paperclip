@@ -431,7 +431,7 @@ export async function execute(
   const baseUrl = trimSlash(baseUrlRaw);
   const model = asString(config.model, DEFAULT_MODEL).trim();
   const apiKey = asString(config.apiKey, "").trim();
-  const timeoutSec = asNumber(config.timeoutSec, 120);
+  const timeoutSec = asNumber(config.timeoutSec, 600);
   const temperature = asNumber(config.temperature, 0.7);
   const maxTokens = asNumber(config.maxTokens, 0);
   const maxToolRounds = asNumber(config.maxToolRounds, 10);
