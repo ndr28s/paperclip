@@ -66,19 +66,15 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
     return m;
   }, [rawProjects]);
 
-  const project = PROJECTS.find(p => p.id === projectId) || PROJECTS[0];
-  const lead = AGENTS.find(a => a.id === project.lead);
-
-  // Build issues for this project
+  // Build issues for this project (projectId scoped, no project object needed yet)
   const projectIssues = useMemo(() => {
     if (rawIssues) {
       return rawIssues
         .filter(i => i.projectId === projectId)
         .map(r => transformIssue(r, projectMap));
     }
-    const issueProjectName = PROJECT_NAME_FROM_ID[project.id] || project.name;
     return [];
-  }, [rawIssues, projectId, projectMap, project.id, project.name]);
+  }, [rawIssues, projectId, projectMap]);
 
   // Build goals for this project
   const projectGoals = useMemo(() => {
@@ -88,14 +84,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       return rawGoals.map(r => transformGoal(r));
     }
     return [];
-  }, [rawGoals, project.id]);
-
-  const projectAgentIds = new Set(projectIssues.map(i => i.assignee).filter(Boolean));
-  if (project.lead) projectAgentIds.add(project.lead);
-
-  const doneCount = projectIssues.filter(i => i.status === "done").length;
-  const blockedCount = projectIssues.filter(i => i.status === "blocked").length;
-  const progressPct = projectIssues.length > 0 ? Math.round((doneCount / projectIssues.length) * 100) : 0;
+  }, [rawGoals]);
 
   const projectAudit = useMemo(() => {
     if (rawActivity) {
@@ -104,9 +93,36 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
         .map(r => transformActivity(r))
         .slice(0, 14);
     }
-    const issueProjectName = PROJECT_NAME_FROM_ID[project.id] || project.name;
     return [];
-  }, [rawActivity, projectId, projectIssues, project.id, project.name]);
+  }, [rawActivity, projectId, projectIssues]);
+
+  if (!rawProjects) {
+    return (
+      <main className="main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "var(--fg-3)", fontSize: 13 }}>Loading...</div>
+      </main>
+    );
+  }
+
+  const project = PROJECTS.find(p => p.id === projectId);
+  if (!project) {
+    return (
+      <main className="main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center", color: "var(--fg-2)" }}>
+          <div style={{ fontSize: 13, marginBottom: 8 }}>프로젝트를 찾을 수 없습니다.</div>
+          {onBack && <button onClick={onBack} style={{ fontSize: 13, color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}>← 돌아가기</button>}
+        </div>
+      </main>
+    );
+  }
+  const lead = AGENTS.find(a => a.id === project.lead);
+
+  const projectAgentIds = new Set(projectIssues.map(i => i.assignee).filter(Boolean));
+  if (project.lead) projectAgentIds.add(project.lead);
+
+  const doneCount = projectIssues.filter(i => i.status === "done").length;
+  const blockedCount = projectIssues.filter(i => i.status === "blocked").length;
+  const progressPct = projectIssues.length > 0 ? Math.round((doneCount / projectIssues.length) * 100) : 0;
 
   const initials = project.name.split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase();
 

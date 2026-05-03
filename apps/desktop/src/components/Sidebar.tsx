@@ -180,6 +180,20 @@ export function Sidebar({ active, onNavigate, onCreateOrgRequest, onCompanyCreat
         })}
       </div>
 
+      <button
+        className={`nav-item ${active === "settings" ? "active" : ""}`}
+        onClick={() => onNavigate("settings")}
+        style={{ marginBottom: 4 }}
+      >
+        <span className="ic">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M8 2v1M8 13v1M2 8h1M13 8h1M3.5 3.5l.7.7M11.8 11.8l.7.7M3.5 12.5l.7-.7M11.8 4.2l.7-.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </span>
+        <span>Settings</span>
+      </button>
+
       <div className="sidebar-foot">
         <div className="avatar">{avatarText}</div>
         <div style={{ flex: 1, minWidth: 0 }}>

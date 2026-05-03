@@ -33,6 +33,7 @@ export function Icon({ name, size = 14 }: IconProps) {
     case "circle-check": return <svg width={s} height={s} viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke={stroke} strokeWidth={sw}/><path d="M5.5 8l2 2 3-3" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"/></svg>;
     case "x": return <svg width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke={stroke} strokeWidth={sw} strokeLinecap="round"/></svg>;
     case "send": return <svg width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M2 8L14 2.5l-3.5 12-2.5-5L2 8z" stroke={stroke} strokeWidth={sw} strokeLinejoin="round"/></svg>;
+    case "repeat": return <svg width={s} height={s} viewBox="0 0 16 16" fill="none"><path d="M3 10V7a5 5 0 0 1 9.5-2.2M13 6V9a5 5 0 0 1-9.5 2.2M11 4l2 2-2 2M5 12l-2-2 2-2" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"/></svg>;
     default: return null;
   }
 }

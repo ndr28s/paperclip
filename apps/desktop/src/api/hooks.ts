@@ -25,6 +25,35 @@ function useApiData<T>(
   return { data, loading, error, refetch: doFetch };
 }
 
+function useApiDataPolled<T>(
+  url: string | null,
+  intervalMs: number,
+  deps: unknown[] = []
+): { data: T | null; loading: boolean; error: string | null; refetch: () => void } {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const doFetch = useCallback(() => {
+    if (!url) return;
+    setLoading(true);
+    setError(null);
+    api.get<T>(url)
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, ...deps]);
+
+  useEffect(() => {
+    doFetch();
+    const id = setInterval(doFetch, intervalMs);
+    return () => clearInterval(id);
+  }, [doFetch, intervalMs]);
+
+  return { data, loading, error, refetch: doFetch };
+}
+
 export function useAgents(companyId: string | null) {
   return useApiData<RawAgent[]>(companyId ? `/companies/${companyId}/agents` : null);
 }
@@ -54,9 +83,74 @@ export function useGoals(companyId: string | null) {
   return useApiData<RawGoal[]>(companyId ? `/companies/${companyId}/goals` : null);
 }
 
+// Routines
+export interface RawRoutineTrigger {
+  id: string;
+  routineId: string;
+  type: string; // "cron" | "webhook" | "manual"
+  config: Record<string, unknown>;
+  status: string;
+  createdAt: string;
+}
+
+export interface RawRoutine {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string | null;
+  status: string; // "active" | "paused" | "archived"
+  agentId?: string | null;
+  projectId?: string | null;
+  prompt: string;
+  concurrencyPolicy?: string | null;
+  catchUpPolicy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  triggers?: RawRoutineTrigger[];
+}
+
+export interface RawRoutineRun {
+  id: string;
+  routineId: string;
+  status: string; // "pending" | "running" | "success" | "failed" | "cancelled"
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  error?: string | null;
+  createdAt: string;
+}
+
+export function useRoutines(companyId: string | null) {
+  return useApiDataPolled<RawRoutine[]>(companyId ? `/companies/${companyId}/routines` : null, 15000);
+}
+
+export function useRoutineRuns(routineId: string | null) {
+  return useApiData<RawRoutineRun[]>(routineId ? `/routines/${routineId}/runs?limit=20` : null, [routineId]);
+}
+
+// Issue detail & comments
+export interface RawIssueComment {
+  id: string;
+  issueId: string;
+  body: string;
+  authorUserId?: string | null;
+  authorAgentId?: string | null;
+  authorName?: string | null;
+  createdAt: string;
+}
+
+export function useIssue(issueId: string | null) {
+  return useApiData<RawIssue>(issueId ? `/issues/${issueId}` : null, [issueId]);
+}
+
+export function useIssueComments(issueId: string | null) {
+  return useApiData<RawIssueComment[]>(issueId ? `/issues/${issueId}/comments` : null, [issueId]);
+}
+
 export function useApprovals(companyId: string | null, status?: string) {
   const qs = status ? `?status=${status}` : "";
-  return useApiData<RawApproval[]>(companyId ? `/companies/${companyId}/approvals${qs}` : null, [status]);
+  return useApiDataPolled<RawApproval[]>(companyId ? `/companies/${companyId}/approvals${qs}` : null, 10000, [status]);
 }
 
 export function useActiveSession(companyId: string | null) {
@@ -79,7 +173,7 @@ export function useDashboard(companyId: string | null) {
 }
 
 export function useSidebarBadges(companyId: string | null) {
-  return useApiData<RawSidebarBadges>(companyId ? `/companies/${companyId}/sidebar-badges` : null);
+  return useApiDataPolled<RawSidebarBadges>(companyId ? `/companies/${companyId}/sidebar-badges` : null, 15000);
 }
 
 function daysToRange(days: number): string {

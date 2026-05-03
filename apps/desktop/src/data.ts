@@ -85,9 +85,12 @@ export const NAV: NavItem[] = [
   { id: "agents", label: "Agents", icon: "user", badge: "24", group: "workspace" },
   { id: "projects", label: "Projects", icon: "folder", badge: "8", group: "workspace" },
   { id: "issues", label: "Issues", icon: "issue", badge: "37", group: "workspace" },
+  { id: "inbox", label: "Inbox", icon: "bell", badge: null, group: "workspace" },
   { id: "approvals", label: "Approvals", icon: "check", badge: "6", accent: true, group: "operations" },
   { id: "usage", label: "Usage", icon: "wave", badge: null, group: "operations" },
   { id: "activity", label: "Activity", icon: "pulse", badge: null, group: "operations" },
+  { id: "goals", label: "Goals", icon: "target", badge: null, group: "operations" },
+  { id: "routines", label: "Routines", icon: "repeat", badge: null, group: "operations" },
 ];
 
 export const KPIS: KPI[] = [

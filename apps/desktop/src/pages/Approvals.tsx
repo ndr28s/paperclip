@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { AGENTS as STATIC_AGENTS, APPROVALS as STATIC_APPROVALS, Approval, Agent } from "../data";
 import { useCompany } from "../context/CompanyContext";
 import { useApprovals as useApprovalsApi, useAgents as useAgentsApi } from "../api/hooks";
@@ -204,6 +204,8 @@ export function ApprovalsPage() {
       };
     });
   }, [rawApprovals, AGENTS]);
+
+  // Notification logic has been moved to GlobalNotifier in App.tsx (runs app-wide)
 
   const counts = useMemo(() => ({
     all: list.length,

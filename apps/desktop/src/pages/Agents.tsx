@@ -471,8 +471,119 @@ function AdapterConfigEditor({ rawAgent, onSaved }: { rawAgent: RawAgent; onSave
   );
 }
 
+// ── Delete Agent Modal ──
+function DeleteAgentModal({ agent, agents, companyId, onClose, onDeleted }: {
+  agent: Agent;
+  agents: Agent[];
+  companyId: string | null;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [issueHandling, setIssueHandling] = useState<"keep" | "delete" | "reassign">("keep");
+  const [reassignTo, setReassignTo] = useState<string>("");
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const otherAgents = agents.filter(a => a.id !== agent.id);
+
+  async function handleDelete() {
+    if (!companyId) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      // Fetch issues assigned to this agent
+      const issues = await api.get<{ id: string }[]>(
+        `/companies/${companyId}/issues?assigneeAgentId=${agent.id}`
+      );
+      const issueList = Array.isArray(issues) ? issues : [];
+
+      if (issueHandling === "delete") {
+        // Delete all issues first
+        await Promise.all(issueList.map(i => api.delete(`/issues/${i.id}`)));
+      } else if (issueHandling === "reassign" && reassignTo) {
+        // Reassign all issues
+        await Promise.all(issueList.map(i =>
+          api.patch(`/issues/${i.id}`, { assigneeAgentId: reassignTo })
+        ));
+      }
+      // Delete the agent
+      await api.delete(`/agents/${agent.id}`);
+      onDeleted();
+    } catch (e) {
+      setError((e as Error).message);
+      setDeleting(false);
+    }
+  }
+
+  const radioLabelStyle: React.CSSProperties = {
+    display: "flex", alignItems: "flex-start", gap: 8,
+    fontSize: 13, color: "var(--fg-1)", cursor: "pointer", padding: "6px 0",
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} onClick={onClose} />
+      <div style={{ position: "relative", background: "var(--bg-1)", border: "1px solid var(--border-1)", borderRadius: 12, padding: 24, width: 420, zIndex: 1 }}>
+        <h3 style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 600 }}>에이전트 삭제</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--bg-2)", borderRadius: 8, marginBottom: 16 }}>
+          <span style={{ width: 32, height: 32, borderRadius: "50%", background: agent.color, color: "#fff", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{agent.initials}</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-0)" }}>{agent.name}</div>
+            <div style={{ fontSize: 11, color: "var(--fg-3)" }}>{agent.role}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: "var(--err)", marginBottom: 16, padding: "8px 10px", background: "rgba(255,80,80,0.08)", borderRadius: 6, border: "1px solid rgba(255,80,80,0.2)" }}>
+          이 작업은 되돌릴 수 없습니다.
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-2)", marginBottom: 6 }}>담당 이슈 처리 방법</div>
+          <label style={radioLabelStyle}>
+            <input type="radio" name="issueHandling" value="keep" checked={issueHandling === "keep"} onChange={() => setIssueHandling("keep")} style={{ marginTop: 2 }} />
+            <span>이슈 보존 — 담당자만 제거</span>
+          </label>
+          <label style={radioLabelStyle}>
+            <input type="radio" name="issueHandling" value="delete" checked={issueHandling === "delete"} onChange={() => setIssueHandling("delete")} style={{ marginTop: 2 }} />
+            <span>이슈도 함께 삭제</span>
+          </label>
+          <label style={radioLabelStyle}>
+            <input type="radio" name="issueHandling" value="reassign" checked={issueHandling === "reassign"} onChange={() => setIssueHandling("reassign")} style={{ marginTop: 2 }} />
+            <span>다른 에이전트에게 재할당</span>
+          </label>
+          {issueHandling === "reassign" && (
+            <select
+              value={reassignTo}
+              onChange={e => setReassignTo(e.target.value)}
+              style={{ display: "block", width: "100%", marginTop: 6, background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: 6, padding: "6px 10px", color: reassignTo ? "var(--fg-0)" : "var(--fg-3)", fontSize: 13 }}
+            >
+              <option value="">에이전트 선택…</option>
+              {otherAgents.map(a => (
+                <option key={a.id} value={a.id}>{a.name} — {a.role}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {error && <div style={{ fontSize: 12, color: "var(--err)", marginBottom: 10 }}>{error}</div>}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button className="btn" onClick={onClose} disabled={deleting}>취소</button>
+          <button
+            className="btn"
+            style={{ background: "var(--err, #e53e3e)", color: "#fff", border: "none", opacity: deleting ? 0.7 : 1 }}
+            disabled={deleting || (issueHandling === "reassign" && !reassignTo)}
+            onClick={handleDelete}
+          >
+            {deleting ? "삭제 중…" : "삭제"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Agent Detail ──
-function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssignTask, onRefresh }: { agent: Agent; rawAgent: RawAgent | undefined; companyId: string | null; onClose: () => void; onOpenChat: (agent: Agent) => void; onAssignTask: () => void; onRefresh: () => void }) {
+function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssignTask, onDeleteAgent, onRefresh }: { agent: Agent; rawAgent: RawAgent | undefined; companyId: string | null; onClose: () => void; onOpenChat: (agent: Agent) => void; onAssignTask: () => void; onDeleteAgent: () => void; onRefresh: () => void }) {
   const pct = Math.min(100, (agent.spent / agent.budget) * 100);
   const barClass = pct >= 100 ? "over" : pct >= 80 ? "warn" : "";
   const tools = TOOLS_BY_ROLE[agent.role] || ["slack", "github"];
@@ -525,6 +636,16 @@ function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssign
           <button className="btn primary" onClick={() => onOpenChat(agent)}>Open chat</button>
           <button className="btn" onClick={onAssignTask}>Assign task</button>
           <button className="btn" title="More"><Icon name="more" size={12} /></button>
+          <button
+            className="btn"
+            title="에이전트 삭제"
+            onClick={onDeleteAgent}
+            style={{ color: "var(--err, #e53e3e)", borderColor: "rgba(229,62,62,0.3)" }}
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4h12M5 4V2.5A.5.5 0 0 1 5.5 2h5a.5.5 0 0 1 .5.5V4M6.5 7v5M9.5 7v5M3 4l1 9.5A.5.5 0 0 0 4.5 14h7a.5.5 0 0 0 .497-.44L13 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -659,6 +780,7 @@ export function Agents({ onNavigate, initialAction, onActionHandled }: {
   const [sort, setSort] = useState("status");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [assignModalAgent, setAssignModalAgent] = useState<Agent | null>(null);
+  const [deleteModalAgent, setDeleteModalAgent] = useState<Agent | null>(null);
   const [hireModalOpen, setHireModalOpen] = useState(false);
   const [ceoHireOpen, setCeoHireOpen] = useState(false);
 
@@ -818,7 +940,7 @@ export function Agents({ onNavigate, initialAction, onActionHandled }: {
           )}
         </div>
 
-        {view === "list" && selected && <AgentDetail agent={selected} rawAgent={rawAgents?.find(r => r.id === selected.id)} companyId={companyId} onClose={() => setSelectedId(null)} onOpenChat={handleOpenChat} onAssignTask={() => setAssignModalAgent(selected)} onRefresh={refetchAgents} />}
+        {view === "list" && selected && <AgentDetail agent={selected} rawAgent={rawAgents?.find(r => r.id === selected.id)} companyId={companyId} onClose={() => setSelectedId(null)} onOpenChat={handleOpenChat} onAssignTask={() => setAssignModalAgent(selected)} onDeleteAgent={() => setDeleteModalAgent(selected)} onRefresh={refetchAgents} />}
       </div>
       <AssignTaskModal
         agent={assignModalAgent}
@@ -826,6 +948,19 @@ export function Agents({ onNavigate, initialAction, onActionHandled }: {
         companyId={companyId}
         onClose={() => setAssignModalAgent(null)}
       />
+      {deleteModalAgent && (
+        <DeleteAgentModal
+          agent={deleteModalAgent}
+          agents={AGENTS}
+          companyId={companyId}
+          onClose={() => setDeleteModalAgent(null)}
+          onDeleted={() => {
+            setDeleteModalAgent(null);
+            setSelectedId(null);
+            refetchAgents();
+          }}
+        />
+      )}
       <HireAgentModal
         open={hireModalOpen}
         companyId={companyId}
