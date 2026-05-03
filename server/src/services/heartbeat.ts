@@ -949,6 +949,40 @@ On Windows hosts, use \`$PAPERCLIP_POST_JSON\` instead of \`curl\` when posting 
 
   printf '%s' '<json>' | python3 -c "$PAPERCLIP_POST_JSON" /api/path`;
 
+async function searchAgentPastExperience(opts: {
+  db: Db;
+  agentId: string;
+  companyId: string;
+  issueContext: {
+    id: string;
+    identifier: string | null;
+    title: string;
+  };
+}): Promise<string[]> {
+  try {
+    const memorySvc = agentMemoryService(opts.db);
+    const query =
+      opts.issueContext.title.trim() ||
+      opts.issueContext.identifier?.trim() ||
+      opts.issueContext.id;
+    const memories = await memorySvc.search({
+      agentId: opts.agentId,
+      companyId: opts.companyId,
+      query,
+      limit: 5,
+    });
+    return memories
+      .map((entry) => entry.body.trim())
+      .filter((body) => body.length > 0);
+  } catch (err) {
+    logger.warn(
+      { err, agentId: opts.agentId },
+      "failed to search agent memory before run; continuing without past experience",
+    );
+    return [];
+  }
+}
+
 function buildHermesContextOverlay(opts: {
   issueContext: {
     id: string;
@@ -958,12 +992,20 @@ function buildHermesContextOverlay(opts: {
   } | null;
   context: Record<string, unknown>;
   enableAutoSkillCreation: boolean;
+  pastExperience: string[];
 }): Record<string, unknown> {
-  const { issueContext, context, enableAutoSkillCreation } = opts;
+  const { issueContext, context, enableAutoSkillCreation, pastExperience } = opts;
   if (!issueContext) return {};
   const wakeReason = readNonEmptyString(context.wakeReason);
   let taskBody = issueContext.description ?? "";
   if (enableAutoSkillCreation) taskBody += HERMES_SKILL_PROPOSAL_HINT;
+  if (pastExperience.length > 0) {
+    const block = ["", "", "## Past Experience", ""];
+    for (const entry of pastExperience) {
+      block.push(`- ${entry}`);
+    }
+    taskBody += block.join("\n");
+  }
   return {
     taskId: issueContext.id,
     taskKey: issueContext.identifier,
@@ -3515,12 +3557,30 @@ export function heartbeatService(db: Db) {
       runScopedMentionedSkillKeys,
     );
     const runtimeSkillEntries = await companySkills.listRuntimeSkillEntries(agent.companyId);
+    const pastExperience =
+      enableAgentMemory && SESSIONED_LOCAL_ADAPTERS.has(agent.adapterType) && issueContext
+        ? await searchAgentPastExperience({
+            db,
+            agentId: agent.id,
+            companyId: agent.companyId,
+            issueContext,
+          })
+        : [];
+    if (paperclipWakePayload && pastExperience.length > 0) {
+      (paperclipWakePayload as Record<string, unknown>).pastExperience = pastExperience;
+      context[PAPERCLIP_WAKE_PAYLOAD_KEY] = paperclipWakePayload;
+    }
     const runtimeConfig = {
       ...effectiveResolvedConfig,
       paperclipRuntimeSkills: runtimeSkillEntries,
       ...(SESSIONED_LOCAL_ADAPTERS.has(agent.adapterType) && { enableAgentMemory }),
       ...(agent.adapterType === "hermes_local"
-        ? buildHermesContextOverlay({ issueContext, context, enableAutoSkillCreation })
+        ? buildHermesContextOverlay({
+            issueContext,
+            context,
+            enableAutoSkillCreation,
+            pastExperience,
+          })
         : (enableAutoSkillCreation && {
             paperclipSkillProposalHint: HERMES_SKILL_PROPOSAL_HINT,
           })),
@@ -4218,8 +4278,9 @@ export function heartbeatService(db: Db) {
               ?? ((persistedResultJson as Record<string, unknown>).result as string | undefined)
             : null;
           if (summary && summary.trim().length > 0) {
-            const memoryBody = issueId
-              ? `Task ${issueId}: ${summary.trim()}`
+            const issueLabel = issueContext?.identifier?.trim() || issueId || null;
+            const memoryBody = issueLabel
+              ? `[${issueLabel}] ${summary.trim()}`
               : summary.trim();
             await memorySvc.write({
               agentId: agent.id,

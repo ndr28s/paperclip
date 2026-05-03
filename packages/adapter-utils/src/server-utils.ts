@@ -277,6 +277,7 @@ type PaperclipWakePayload = {
   truncated: boolean;
   fallbackFetchNeeded: boolean;
   meetingSession: PaperclipWakeMeetingSession | null;
+  pastExperience: string[];
 };
 
 function normalizePaperclipWakeIssue(value: unknown): PaperclipWakeIssue | null {
@@ -401,8 +402,20 @@ export function normalizePaperclipWakePayload(value: unknown): PaperclipWakePayl
     : [];
   const executionStage = normalizePaperclipWakeExecutionStage(payload.executionStage);
   const meetingSession = normalizePaperclipWakeMeetingSession(payload.meetingSession);
+  const pastExperience = Array.isArray(payload.pastExperience)
+    ? payload.pastExperience
+        .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+        .map((entry) => entry.trim())
+    : [];
 
-  if (comments.length === 0 && commentIds.length === 0 && !executionStage && !normalizePaperclipWakeIssue(payload.issue) && !meetingSession) {
+  if (
+    comments.length === 0 &&
+    commentIds.length === 0 &&
+    !executionStage &&
+    !normalizePaperclipWakeIssue(payload.issue) &&
+    !meetingSession &&
+    pastExperience.length === 0
+  ) {
     return null;
   }
 
@@ -420,6 +433,7 @@ export function normalizePaperclipWakePayload(value: unknown): PaperclipWakePayl
     truncated: asBoolean(payload.truncated, false),
     fallbackFetchNeeded: asBoolean(payload.fallbackFetchNeeded, false),
     meetingSession,
+    pastExperience,
   };
 }
 
@@ -554,6 +568,14 @@ export function renderPaperclipWakePrompt(
     );
     if (comment.bodyTruncated) {
       lines.push("[comment body truncated]");
+    }
+    lines.push("");
+  }
+
+  if (normalized.pastExperience.length > 0) {
+    lines.push("## Past Experience", "");
+    for (const entry of normalized.pastExperience) {
+      lines.push(`- ${entry}`);
     }
     lines.push("");
   }

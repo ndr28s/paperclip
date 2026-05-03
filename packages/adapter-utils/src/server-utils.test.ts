@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { runChildProcess } from "./server-utils.js";
+import { renderPaperclipWakePrompt, runChildProcess } from "./server-utils.js";
 
 function isPidAlive(pid: number) {
   try {
@@ -84,5 +84,54 @@ describe("runChildProcess", () => {
     expect(Number.isInteger(descendantPid) && descendantPid > 0).toBe(true);
 
     expect(await waitForPidExit(descendantPid!, 2_000)).toBe(true);
+  });
+});
+
+describe("renderPaperclipWakePrompt", () => {
+  const baseIssue = {
+    id: "issue-1",
+    identifier: "GLI-2",
+    title: "CTO 고용",
+    status: "todo",
+    priority: "high",
+  };
+
+  it("renders the Past Experience section when entries are present", () => {
+    const prompt = renderPaperclipWakePrompt({
+      reason: "issue_updated",
+      issue: baseIssue,
+      pastExperience: [
+        "[GLI-1] Hire flow requires CEO sign-off above $500/mo",
+        "[GLI-3] pnpm typecheck must run before merging strict-mode changes",
+      ],
+    });
+    expect(prompt).toContain("## Past Experience");
+    expect(prompt).toContain("- [GLI-1] Hire flow requires CEO sign-off above $500/mo");
+    expect(prompt).toContain("- [GLI-3] pnpm typecheck must run before merging strict-mode changes");
+  });
+
+  it("omits the Past Experience section when there are no entries", () => {
+    const prompt = renderPaperclipWakePrompt({
+      reason: "issue_updated",
+      issue: baseIssue,
+      pastExperience: [],
+    });
+    expect(prompt).not.toContain("Past Experience");
+  });
+
+  it("ignores empty/non-string past experience entries", () => {
+    const prompt = renderPaperclipWakePrompt({
+      reason: "issue_updated",
+      issue: baseIssue,
+      pastExperience: ["", "   ", 42 as unknown as string, "[GLI-9] keep me"],
+    });
+    expect(prompt).toContain("## Past Experience");
+    expect(prompt).toContain("- [GLI-9] keep me");
+    // Only one bullet under the Past Experience heading
+    const bulletsUnderHeading = prompt
+      .split("## Past Experience")[1]!
+      .split("\n")
+      .filter((line) => line.startsWith("- "));
+    expect(bulletsUnderHeading).toHaveLength(1);
   });
 });
