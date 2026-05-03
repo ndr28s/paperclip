@@ -610,6 +610,54 @@ export async function execute(
       const errorMessage =
         apiMessage ||
         `OpenAI-compatible API returned HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}.`;
+
+      // If we sent tools and got a 4xx, the endpoint may not support function calling.
+      // Retry once without tools so the agent can at least generate a text response.
+      if (useTools && requestBody.tools && (response.status >= 400 && response.status < 500)) {
+        await onLog(
+          "stdout",
+          `${JSON.stringify({ type: "tools_unsupported_fallback", status: response.status, message: errorMessage })}\n`,
+        );
+        delete requestBody.tools;
+        const retryController = new AbortController();
+        const retryTimer = timeoutSec > 0 ? setTimeout(() => retryController.abort(), timeoutSec * 1000) : null;
+        let retryResponse: Response;
+        try {
+          retryResponse = await fetch(chatUrl, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(requestBody),
+            signal: retryController.signal,
+          });
+        } catch (retryErr) {
+          if (retryTimer) clearTimeout(retryTimer);
+          const retryAborted = retryErr instanceof Error && retryErr.name === "AbortError";
+          const retryErrMsg = retryAborted ? `Request timed out after ${timeoutSec}s` : retryErr instanceof Error ? retryErr.message : String(retryErr);
+          await onLog("stderr", `${retryErrMsg}\n`);
+          return { exitCode: 1, signal: null, timedOut: retryAborted, errorMessage: retryErrMsg, provider: "openai_compatible", biller: hostnameFromUrl(baseUrl), model };
+        }
+        if (retryTimer) clearTimeout(retryTimer);
+        const retryText = await retryResponse.text();
+        let retryParsed: ChatResponse | null = null;
+        try { retryParsed = retryText ? (JSON.parse(retryText) as ChatResponse) : null; } catch { retryParsed = null; }
+        if (!retryResponse.ok) {
+          const retryMsg = retryParsed?.error?.message?.trim() || `OpenAI-compatible API returned HTTP ${retryResponse.status}.`;
+          await onLog("stderr", `${retryMsg}\n`);
+          return { exitCode: 1, signal: null, timedOut: false, errorMessage: retryMsg, provider: "openai_compatible", biller: hostnameFromUrl(baseUrl), model };
+        }
+        // Use retryParsed as the result for this round (no tool calls possible)
+        const retryChoice = retryParsed?.choices?.[0];
+        const retryContent = retryChoice?.message?.content ?? null;
+        totalInputTokens += retryParsed?.usage?.prompt_tokens ?? 0;
+        totalOutputTokens += retryParsed?.usage?.completion_tokens ?? 0;
+        totalCachedTokens += retryParsed?.usage?.prompt_tokens_details?.cached_tokens ?? 0;
+        if (retryContent) {
+          const displayed = stripThinkBlocks(retryContent);
+          if (displayed) { await emitEvent(onLog, { type: "assistant", text: retryContent, round: rounds, note: "tools_disabled_fallback" }); finalText = displayed; }
+        }
+        break; // no tools available, end loop
+      }
+
       await onLog(
         "stderr",
         `${errorMessage}${responseText && !apiMessage ? `\n${responseText.slice(0, 500)}` : ""}\n`,
