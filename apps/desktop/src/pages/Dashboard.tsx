@@ -535,34 +535,47 @@ function CreateTaskModal({ open, companyId, agents, defaultAgentId, onClose, onC
 }
 
 // ── Dashboard Hire Modal ──
-function DashboardHireModal({ open, companyId, ceoAgentId, onClose, onHired }: {
+function DashboardHireModal({ open, companyId, ceoAgentId, onClose }: {
   open: boolean;
   companyId: string | null;
   ceoAgentId: string | null;
   onClose: () => void;
-  onHired: () => void;
 }) {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (open) {
-      setName(""); setRole(""); setError(null); setDone(false);
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }
-  }, [open]);
 
   if (!open) return null;
 
+  function reset() { setName(""); setRole(""); setReason(""); setSubmitting(false); setError(null); setDone(false); }
+  function handleClose() { reset(); onClose(); }
+
   async function handleSubmit() {
-    if (!role.trim() || !name.trim() || !companyId) return;
-    setSubmitting(true); setError(null);
+    if (!name.trim() || !role.trim() || !companyId) return;
+    setSubmitting(true);
+    setError(null);
     try {
-      const description = `## 고용 검토 요청\n\n**역할**: ${role}\n**이름**: ${name}`;
+      const description = [
+        "## 고용 검토 요청",
+        "",
+        `**후보 역할**: ${role}`,
+        `**이름 / 설명**: ${name}`,
+        "",
+        "## 요청 배경",
+        "",
+        reason.trim() || "(작성된 배경 없음)",
+        "",
+        "## CEO 검토 사항",
+        "",
+        "1. 해당 역할의 현재 필요성 평가",
+        "2. 기존 에이전트로 커버 가능한지 확인",
+        "3. 예산 적합성 및 ROI 검토",
+        "4. 적합하다고 판단되면 → Approvals에서 Hire 요청 생성",
+      ].join("\n");
+
       await api.post(`/companies/${companyId}/issues`, {
         title: `[고용 검토] ${role}: ${name}`,
         description,
@@ -579,39 +592,70 @@ function DashboardHireModal({ open, companyId, ceoAgentId, onClose, onHired }: {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} onClick={onClose} />
-      <div style={{ position: "relative", zIndex: 1, background: "var(--bg-1)", border: "1px solid var(--border-1)", borderRadius: 12, padding: 28, width: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
-        <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>{done ? "요청 완료" : "에이전트 고용"}</h3>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={handleClose} />
+      <div style={{ position: "relative", background: "var(--bg-1)", border: "1px solid var(--border-1)", borderRadius: 10, padding: 24, width: 440, zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{done ? "요청 완료" : "Hire agent"}</h3>
+          <button className="close-btn" onClick={handleClose}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+
         {done ? (
-          <div style={{ textAlign: "center", padding: "12px 0" }}>
+          <div style={{ textAlign: "center", padding: "16px 0" }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>✅</div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>CEO에게 검토 요청됨</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-0)", marginBottom: 6 }}>CEO에게 검토 요청됨</div>
             <div style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 16 }}>CEO가 적합성을 평가 후 Approval 요청을 생성합니다.</div>
-            <button className="btn primary" onClick={() => { setDone(false); onHired(); }}>확인</button>
+            <button className="btn primary" onClick={handleClose}>닫기</button>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <label style={{ fontSize: 12, color: "var(--fg-2)" }}>
-              역할 *
-              <input ref={inputRef} type="text" value={role} onChange={e => setRole(e.target.value)}
-                placeholder="예: Backend Engineer, Designer…"
-                style={{ display: "block", width: "100%", marginTop: 5, background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: 6, padding: "8px 10px", color: "var(--fg-0)", fontSize: 13, boxSizing: "border-box" }} />
-            </label>
-            <label style={{ fontSize: 12, color: "var(--fg-2)" }}>
-              이름 *
-              <input type="text" value={name} onChange={e => setName(e.target.value)}
-                placeholder="예: Aria, Juno…"
-                style={{ display: "block", width: "100%", marginTop: 5, background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: 6, padding: "8px 10px", color: "var(--fg-0)", fontSize: 13, boxSizing: "border-box" }} />
-            </label>
-            {error && <div style={{ fontSize: 12, color: "var(--err, #e55)" }}>{error}</div>}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
-              <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 7, border: "1px solid var(--border-1)", background: "transparent", color: "var(--fg-2)", fontSize: 13, cursor: "pointer" }}>취소</button>
-              <button onClick={handleSubmit} disabled={!role.trim() || !name.trim() || submitting}
-                style={{ padding: "8px 20px", borderRadius: 7, border: "none", background: "var(--accent)", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: !role.trim() || !name.trim() || submitting ? 0.6 : 1 }}>
-                {submitting ? "요청 중…" : "CEO에게 검토 요청"}
-              </button>
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <label style={{ fontSize: 12, color: "var(--fg-2)" }}>
+                역할 (Role) *
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="예: Backend Engineer, Data Analyst…"
+                  value={role}
+                  onChange={e => setRole(e.target.value)}
+                  style={{ display: "block", width: "100%", marginTop: 4, background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: 6, padding: "6px 10px", color: "var(--fg-0)", fontSize: 13, boxSizing: "border-box" }}
+                />
+              </label>
+              <label style={{ fontSize: 12, color: "var(--fg-2)" }}>
+                이름 / 설명 *
+                <input
+                  type="text"
+                  placeholder="예: Aria, Senior backend specialist…"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  style={{ display: "block", width: "100%", marginTop: 4, background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: 6, padding: "6px 10px", color: "var(--fg-0)", fontSize: 13, boxSizing: "border-box" }}
+                />
+              </label>
+              <label style={{ fontSize: 12, color: "var(--fg-2)" }}>
+                요청 배경 (선택)
+                <textarea
+                  placeholder="왜 이 에이전트가 필요한지 설명해주세요…"
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  rows={3}
+                  style={{ display: "block", width: "100%", marginTop: 4, background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: 6, padding: "6px 10px", color: "var(--fg-0)", fontSize: 13, resize: "vertical", boxSizing: "border-box" }}
+                />
+              </label>
             </div>
-          </div>
+            <div style={{ fontSize: 12, color: "var(--fg-3)", marginTop: 8, padding: "8px 10px", background: "var(--bg-2)", borderRadius: 6 }}>
+              CEO가 적합성 평가 후 Approval 요청을 생성합니다.
+            </div>
+            {error && <div style={{ fontSize: 12, color: "var(--err)", marginTop: 8 }}>{error}</div>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+              <button className="btn" onClick={handleClose}>취소</button>
+              <button
+                className="btn primary"
+                disabled={!name.trim() || !role.trim() || submitting}
+                onClick={handleSubmit}
+              >{submitting ? "요청 중…" : "CEO에게 검토 요청"}</button>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -750,7 +794,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: string) => void 
         </div>
       </div>
       <CreateTaskModal open={createTaskOpen} companyId={companyId} agents={rawAgents ?? []} defaultAgentId={createTaskAgentId} onClose={() => { setCreateTaskOpen(false); setCreateTaskAgentId(undefined); }} onCreated={() => { setCreateTaskOpen(false); setCreateTaskAgentId(undefined); }} />
-      <DashboardHireModal open={hireOpen} companyId={companyId} ceoAgentId={ceoAgentId} onClose={() => setHireOpen(false)} onHired={() => setHireOpen(false)} />
+      <DashboardHireModal open={hireOpen} companyId={companyId} ceoAgentId={ceoAgentId} onClose={() => setHireOpen(false)} />
     </main>
   );
 }
