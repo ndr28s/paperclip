@@ -635,16 +635,13 @@ function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssign
         <div className="detail-actions">
           <button className="btn primary" onClick={() => onOpenChat(agent)}>Open chat</button>
           <button className="btn" onClick={onAssignTask}>Assign task</button>
-          <button className="btn" title="More"><Icon name="more" size={12} /></button>
           <button
             className="btn"
             title="에이전트 삭제"
             onClick={onDeleteAgent}
             style={{ color: "var(--err, #e53e3e)", borderColor: "rgba(229,62,62,0.3)" }}
           >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4h12M5 4V2.5A.5.5 0 0 1 5.5 2h5a.5.5 0 0 1 .5.5V4M6.5 7v5M9.5 7v5M3 4l1 9.5A.5.5 0 0 0 4.5 14h7a.5.5 0 0 0 .497-.44L13 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            삭제
           </button>
         </div>
       </div>
