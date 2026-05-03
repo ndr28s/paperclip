@@ -380,9 +380,16 @@ function AgentRow({ agent, selected, onSelect, onOpenChat }: { agent: Agent; sel
 }
 
 // ── Connection Test Result ──
+interface ConnTestCheck {
+  code?: string;
+  level: "info" | "warn" | "error";
+  message?: string;
+  hint?: string;
+  detail?: string;
+}
 interface ConnTestResult {
-  pass: boolean;
-  checks: { label: string; status: "pass" | "warn" | "fail"; message?: string }[];
+  status: "pass" | "warn" | "fail";
+  checks: ConnTestCheck[];
 }
 
 // ── Adapter Config Editor ──
@@ -582,19 +589,24 @@ function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssign
               )}
               {connResult && (
                 <div style={{ marginTop: 4 }}>
-                  <div style={{ fontSize: 12, color: connResult.pass ? "var(--ok)" : "var(--err)", fontWeight: 600, marginBottom: 4 }}>
-                    {connResult.pass ? "✓ 연결 성공" : "✗ 연결 실패"}
+                  <div style={{ fontSize: 12, color: connResult.status === "pass" ? "var(--ok)" : connResult.status === "warn" ? "var(--warn, #F5A623)" : "var(--err)", fontWeight: 600, marginBottom: 4 }}>
+                    {connResult.status === "pass" ? "✓ 연결 성공" : connResult.status === "warn" ? "⚠ 연결 경고" : "✗ 연결 실패"}
                   </div>
                   {connResult.checks && connResult.checks.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      {connResult.checks.map((c, i) => (
-                        <div key={i} style={{ fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
-                          <span style={{ color: c.status === "pass" ? "var(--ok)" : c.status === "warn" ? "var(--warn, #F5A623)" : "var(--err)", flexShrink: 0 }}>
-                            {c.status === "pass" ? "✓" : c.status === "warn" ? "⚠" : "✗"}
-                          </span>
-                          <span style={{ color: "var(--fg-1)" }}>{c.label}{c.message ? `: ${c.message}` : ""}</span>
-                        </div>
-                      ))}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      {connResult.checks.map((c, i) => {
+                        const icon = c.level === "info" ? "✓" : c.level === "warn" ? "⚠" : "✗";
+                        const color = c.level === "info" ? "var(--ok)" : c.level === "warn" ? "var(--warn, #F5A623)" : "var(--err)";
+                        return (
+                          <div key={i} style={{ fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                            <span style={{ color, flexShrink: 0 }}>{icon}</span>
+                            <span style={{ color: "var(--fg-1)" }}>
+                              {c.message}
+                              {c.hint && <span style={{ color: "var(--fg-3)", display: "block", marginTop: 1 }}>{c.hint}</span>}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
