@@ -576,13 +576,20 @@ function DashboardHireModal({ open, companyId, ceoAgentId, onClose }: {
         "4. 적합하다고 판단되면 → Approvals에서 Hire 요청 생성",
       ].join("\n");
 
-      await api.post(`/companies/${companyId}/issues`, {
+      const issue = await api.post<{ id: string }>(`/companies/${companyId}/issues`, {
         title: `[고용 검토] ${role}: ${name}`,
         description,
         assigneeAgentId: ceoAgentId || null,
-        status: "backlog",
-        priority: "medium",
+        status: "todo",
+        priority: "high",
       });
+      // Wake up the CEO so it processes the issue immediately
+      if (ceoAgentId) {
+        api.post(`/agents/${ceoAgentId}/wakeup`, {
+          source: "assignment",
+          payload: { issueId: issue.id },
+        }).catch(() => {});
+      }
       setDone(true);
     } catch (e) {
       setError((e as Error).message);
