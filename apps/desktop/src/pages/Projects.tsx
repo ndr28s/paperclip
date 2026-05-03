@@ -91,7 +91,7 @@ export function Projects({ onOpenProject }: { onOpenProject?: (id: string) => vo
   const { data: rawAgents } = useAgentsApi(companyId);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 
@@ -102,7 +102,7 @@ export function Projects({ onOpenProject }: { onOpenProject?: (id: string) => vo
   }, [rawProjects]);
 
   const PROJECTS: ProjectType[] = useMemo(() => {
-    if (!rawProjects) return STATIC_PROJECTS;
+    if (!rawProjects) return [];
     return rawProjects.map(r => {
       const p = transformProject(r);
       // Compute goalsCount from live goals
@@ -116,14 +116,14 @@ export function Projects({ onOpenProject }: { onOpenProject?: (id: string) => vo
   }, [rawProjects, rawIssues, rawGoals]);
 
   const issues = useMemo(() => {
-    if (!rawIssues) return STATIC_ISSUES;
+    if (!rawIssues) return [];
     return rawIssues.map(r => transformIssue(r, projectMap));
   }, [rawIssues, projectMap]);
 
   function projectProgress(projectId: string, projectName: string) {
     const items = rawIssues
       ? rawIssues.filter(i => i.projectId === projectId)
-      : STATIC_ISSUES.filter(i => i.project === projectName);
+      : [];
     if (items.length === 0) return { pct: 0, done: 0, total: 0 };
     const done = items.filter(i => i.status === "done").length;
     return { pct: Math.round((done / items.length) * 100), done, total: items.length };

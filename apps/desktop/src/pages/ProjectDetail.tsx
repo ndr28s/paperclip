@@ -51,12 +51,12 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
   const { data: rawActivity } = useActivityApi(companyId);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 
   const PROJECTS = useMemo(() => {
-    if (!rawProjects) return STATIC_PROJECTS;
+    if (!rawProjects) return [];
     return rawProjects.map(r => transformProject(r));
   }, [rawProjects]);
 
@@ -77,7 +77,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
         .map(r => transformIssue(r, projectMap));
     }
     const issueProjectName = PROJECT_NAME_FROM_ID[project.id] || project.name;
-    return STATIC_ISSUES.filter(i => i.project === issueProjectName);
+    return [];
   }, [rawIssues, projectId, projectMap, project.id, project.name]);
 
   // Build goals for this project
@@ -87,7 +87,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       // For now, show all goals (they'll be filtered better when API supports project-goal linking)
       return rawGoals.map(r => transformGoal(r));
     }
-    return STATIC_GOALS.filter(g => g.project === project.id);
+    return [];
   }, [rawGoals, project.id]);
 
   const projectAgentIds = new Set(projectIssues.map(i => i.assignee).filter(Boolean));
@@ -105,10 +105,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
         .slice(0, 14);
     }
     const issueProjectName = PROJECT_NAME_FROM_ID[project.id] || project.name;
-    return STATIC_AUDIT.filter(a =>
-      a.subject.toLowerCase().includes(issueProjectName.toLowerCase()) ||
-      projectIssues.some(i => a.subject.includes(i.id))
-    ).slice(0, 14);
+    return [];
   }, [rawActivity, projectId, projectIssues, project.id, project.name]);
 
   const initials = project.name.split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase();

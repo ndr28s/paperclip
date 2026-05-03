@@ -23,7 +23,7 @@ export function UsagePage() {
   const { data: rawProjects } = useProjectsApi(companyId);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 

@@ -8,7 +8,7 @@ import { api } from "../api/client";
 import { Markdown } from "../components/Markdown";
 
 // Module-level fallback for components defined outside the Issues component
-let _dynamicAgents: Agent[] = STATIC_AGENTS;
+let _dynamicAgents: Agent[] = [];
 const agentById = (id: string): Agent | undefined => _dynamicAgents.find(a => a.id === id);
 
 function PriorityIcon({ p }: { p: string }) {
@@ -350,7 +350,7 @@ export function Issues() {
   const { data: rawAgents } = useAgentsApi(companyId);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return fetched ? [] : STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 
@@ -370,7 +370,7 @@ export function Issues() {
     description?: string | null;
   };
   const ISSUES: LiveIssue[] = useMemo(() => {
-    if (!rawIssues) return fetched ? [] : STATIC_ISSUES as LiveIssue[];
+    if (!rawIssues) return [];
     return rawIssues.map(r => ({
       ...transformIssue(r, projectMap),
       due: "",

@@ -42,7 +42,7 @@ export function MeetingsPage() {
   const { data: messages, refetch: refetchMessages } = useMeetingMessages(companyId, session?.id ?? null);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 

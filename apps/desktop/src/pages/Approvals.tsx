@@ -31,7 +31,7 @@ function ApIcon({ name, size = 12 }: { name: string; size?: number }) {
 }
 
 // Module-level dynamic agents reference
-let _approvalAgents: Agent[] = STATIC_AGENTS;
+let _approvalAgents: Agent[] = [];
 
 // ── Approval Row ──
 function ApprovalRow({ approval, selected, onSelect, onAction }: { approval: Approval; selected: boolean; onSelect: (id: string) => void; onAction: (id: string, action: string) => void }) {
@@ -167,7 +167,7 @@ export function ApprovalsPage() {
   const { data: rawAgents } = useAgentsApi(companyId);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return fetched ? [] : STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 
@@ -176,7 +176,7 @@ export function ApprovalsPage() {
 
   // Convert live approvals into the Approval shape the UI expects
   const list: Approval[] = useMemo(() => {
-    if (!rawApprovals) return fetched ? [] : STATIC_APPROVALS;
+    if (!rawApprovals) return [];
     return rawApprovals.map(raw => {
       const transformed = transformApproval(raw);
       const agent = AGENTS.find(a => a.id === raw.requestedByAgentId);

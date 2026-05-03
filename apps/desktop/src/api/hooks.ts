@@ -29,6 +29,18 @@ export function useAgents(companyId: string | null) {
   return useApiData<RawAgent[]>(companyId ? `/companies/${companyId}/agents` : null);
 }
 
+export interface OrgNode {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  reports: OrgNode[];
+}
+
+export function useOrg(companyId: string | null) {
+  return useApiData<OrgNode[]>(companyId ? `/companies/${companyId}/org` : null);
+}
+
 export function useIssues(companyId: string | null, params?: { status?: string; projectId?: string }) {
   const search = params ? new URLSearchParams(Object.entries(params).filter(([, v]) => v != null) as [string, string][]).toString() : "";
   return useApiData<RawIssue[]>(companyId ? `/companies/${companyId}/issues${search ? "?" + search : ""}` : null, [search]);

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { AGENTS as STATIC_AGENTS, AUDIT as STATIC_AUDIT, Agent } from "../data";
+import { Agent } from "../data";
 import { Icon } from "../components/Icon";
 import { useCompany } from "../context/CompanyContext";
-import { useActivity as useActivityApi, useAgents as useAgentsApi, useIssues as useIssuesApi } from "../api/hooks";
+import { useActivity as useActivityApi, useAgents as useAgentsApi, useIssues as useIssuesApi, RawActivity } from "../api/hooks";
 import { transformActivity, transformAgent, actionLabel } from "../api/transforms";
 
 const KIND_LABEL: Record<string, string> = {
@@ -26,9 +26,9 @@ function KindIcon({ kind }: { kind: string }) {
 }
 
 // Module-level dynamic agents
-let _activityAgents: Agent[] = STATIC_AGENTS;
+let _activityAgents: Agent[] = [];
 
-function ActivityRow({ entry }: { entry: typeof STATIC_AUDIT[number] }) {
+function ActivityRow({ entry }: { entry: RawActivity }) {
   const actor = entry.actor === "user" ? null : _activityAgents.find(a => a.id === entry.actor);
   return (
     <div className="act-row">
@@ -63,7 +63,7 @@ export function ActivityPage() {
   const { data: rawIssues } = useIssuesApi(companyId);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return fetched ? [] : STATIC_AGENTS;
+    if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 
@@ -71,7 +71,7 @@ export function ActivityPage() {
   _activityAgents = AGENTS;
 
   const AUDIT = useMemo(() => {
-    if (!rawActivity) return fetched ? [] : STATIC_AUDIT;
+    if (!rawActivity) return [];
     return rawActivity.map(r => {
       const t = transformActivity(r);
       // Map entityType to kind values matching the UI

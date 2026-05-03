@@ -508,7 +508,7 @@ export function Agents({ onNavigate, initialAction, onActionHandled }: {
   }, [initialAction, loading]);
 
   const AGENTS: Agent[] = useMemo(() => {
-    if (!rawAgents) return fetched ? [] : STATIC_AGENTS;
+    if (!rawAgents) return [];
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const counts = new Map<string, number>();
     if (rawActivity) {

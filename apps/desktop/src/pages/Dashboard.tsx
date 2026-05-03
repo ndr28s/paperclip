@@ -649,7 +649,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (page: string) => void 
   const ceoAgentId = useMemo(() => rawAgents?.find(a => a.role === "ceo")?.id ?? null, [rawAgents]);
 
   const liveAgents: Agent[] = useMemo(() => {
-    if (!rawAgents) return fetched ? [] : STATIC_AGENTS;
+    if (!rawAgents) return [];
     const agentList = rawAgents.map(r => transformAgent(r));
     if (!rawIssues) return agentList;
     // Attach current task per agent (in_progress or in_review issue assigned to them)
