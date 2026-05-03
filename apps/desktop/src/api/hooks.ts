@@ -99,6 +99,40 @@ export function useCostsByAgent(companyId: string | null, days = 30) {
   return useApiData<RawCostByAgent[]>(companyId ? `/companies/${companyId}/costs/by-agent${range}` : null, [days]);
 }
 
+export interface RunForIssue {
+  runId: string;
+  agentId: string;
+  status: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  logBytes: number;
+}
+
+export function useIssueRuns(issueId: string | null) {
+  return useApiData<RunForIssue[]>(issueId ? `/issues/${issueId}/runs` : null, [issueId]);
+}
+
+export function useRunLog(runId: string | null) {
+  const [data, setData] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const doFetch = useCallback(() => {
+    if (!runId) return;
+    setLoading(true);
+    setError(null);
+    api.getText(`/heartbeat-runs/${runId}/log`)
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId]);
+
+  useEffect(() => { doFetch(); }, [doFetch]);
+
+  return { data, loading, error, refetch: doFetch };
+}
+
 // Raw API types (from server)
 export interface RawAgent {
   id: string;
@@ -107,6 +141,7 @@ export interface RawAgent {
   role: string;
   title?: string | null;
   reportsTo?: string | null;
+  adapterType?: string | null;
   budgetMonthlyCents: number;
   spentMonthlyCents: number;
   adapterConfig?: Record<string, unknown>;

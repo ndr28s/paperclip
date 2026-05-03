@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { AGENTS as STATIC_AGENTS, Agent } from "../data";
 import { Icon } from "../components/Icon";
 import { useCompany } from "../context/CompanyContext";
-import { useAgents as useAgentsApi, useActivity as useActivityApi, useIssues as useIssuesApi, RawIssue } from "../api/hooks";
+import { useAgents as useAgentsApi, useActivity as useActivityApi, useIssues as useIssuesApi, RawAgent, RawIssue } from "../api/hooks";
 import { transformAgent } from "../api/transforms";
 import { api } from "../api/client";
 import { OrgChart } from "./OrgChart";
@@ -379,12 +379,40 @@ function AgentRow({ agent, selected, onSelect, onOpenChat }: { agent: Agent; sel
   );
 }
 
+// ── Connection Test Result ──
+interface ConnTestResult {
+  pass: boolean;
+  checks: { label: string; status: "pass" | "warn" | "fail"; message?: string }[];
+}
+
 // ── Agent Detail ──
-function AgentDetail({ agent, onClose, onOpenChat, onAssignTask }: { agent: Agent; onClose: () => void; onOpenChat: (agent: Agent) => void; onAssignTask: () => void }) {
+function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssignTask }: { agent: Agent; rawAgent: RawAgent | undefined; companyId: string | null; onClose: () => void; onOpenChat: (agent: Agent) => void; onAssignTask: () => void }) {
   const pct = Math.min(100, (agent.spent / agent.budget) * 100);
   const barClass = pct >= 100 ? "over" : pct >= 80 ? "warn" : "";
   const tools = TOOLS_BY_ROLE[agent.role] || ["slack", "github"];
   const recent = RECENT_BY_ID[agent.id] || [];
+
+  const [connTesting, setConnTesting] = useState(false);
+  const [connResult, setConnResult] = useState<ConnTestResult | null>(null);
+  const [connError, setConnError] = useState<string | null>(null);
+
+  async function runConnectionTest() {
+    if (!companyId || !rawAgent?.adapterType || connTesting) return;
+    setConnTesting(true);
+    setConnResult(null);
+    setConnError(null);
+    try {
+      const result = await api.post<ConnTestResult>(
+        `/companies/${companyId}/adapters/${rawAgent.adapterType}/test-environment`,
+        { adapterConfig: rawAgent.adapterConfig ?? {} }
+      );
+      setConnResult(result);
+    } catch (e) {
+      setConnError((e as Error).message);
+    } finally {
+      setConnTesting(false);
+    }
+  }
 
   return (
     <div className="agent-detail">
@@ -448,6 +476,45 @@ function AgentDetail({ agent, onClose, onOpenChat, onAssignTask }: { agent: Agen
           <div className="detail-tools">
             {tools.map(t => <span key={t} className="tool-chip">{t}</span>)}
           </div>
+          {rawAgent?.adapterType && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: "var(--fg-2)" }}>Adapter: <span style={{ color: "var(--fg-1)" }}>{rawAgent.adapterType}</span></span>
+                <button
+                  className="btn"
+                  style={{ fontSize: 11, padding: "2px 8px", height: 24 }}
+                  onClick={runConnectionTest}
+                  disabled={connTesting || !companyId}
+                >
+                  {connTesting ? "테스트 중…" : "연결 테스트"}
+                </button>
+              </div>
+              {connError && (
+                <div style={{ fontSize: 12, color: "var(--err)", marginTop: 4 }}>
+                  <span style={{ marginRight: 4 }}>✗</span>{connError}
+                </div>
+              )}
+              {connResult && (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: connResult.pass ? "var(--ok)" : "var(--err)", fontWeight: 600, marginBottom: 4 }}>
+                    {connResult.pass ? "✓ 연결 성공" : "✗ 연결 실패"}
+                  </div>
+                  {connResult.checks && connResult.checks.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {connResult.checks.map((c, i) => (
+                        <div key={i} style={{ fontSize: 11, display: "flex", alignItems: "flex-start", gap: 6 }}>
+                          <span style={{ color: c.status === "pass" ? "var(--ok)" : c.status === "warn" ? "var(--warn, #F5A623)" : "var(--err)", flexShrink: 0 }}>
+                            {c.status === "pass" ? "✓" : c.status === "warn" ? "⚠" : "✗"}
+                          </span>
+                          <span style={{ color: "var(--fg-1)" }}>{c.label}{c.message ? `: ${c.message}` : ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="detail-section">
@@ -646,7 +713,7 @@ export function Agents({ onNavigate, initialAction, onActionHandled }: {
           )}
         </div>
 
-        {view === "list" && selected && <AgentDetail agent={selected} onClose={() => setSelectedId(null)} onOpenChat={handleOpenChat} onAssignTask={() => setAssignModalAgent(selected)} />}
+        {view === "list" && selected && <AgentDetail agent={selected} rawAgent={rawAgents?.find(r => r.id === selected.id)} companyId={companyId} onClose={() => setSelectedId(null)} onOpenChat={handleOpenChat} onAssignTask={() => setAssignModalAgent(selected)} />}
       </div>
       <AssignTaskModal
         agent={assignModalAgent}

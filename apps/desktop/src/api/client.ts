@@ -27,8 +27,23 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function apiFetchText(path: string, options?: RequestInit): Promise<string> {
+  const baseUrl = getBaseUrl();
+  const res = await fetch(`${baseUrl}${path}`, {
+    credentials: "include",
+    headers: { "Accept": "text/plain" },
+    ...options,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  }
+  return res.text();
+}
+
 export const api = {
   get: <T>(path: string) => apiFetch<T>(path),
+  getText: (path: string) => apiFetchText(path),
   post: <T>(path: string, body?: unknown) =>
     apiFetch<T>(path, { method: "POST", body: JSON.stringify(body) }),
   patch: <T>(path: string, body?: unknown) =>

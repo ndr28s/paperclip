@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { AGENTS as STATIC_AGENTS, ISSUES as STATIC_ISSUES, Issue, Agent } from "../data";
 import { Icon } from "../components/Icon";
 import { useCompany } from "../context/CompanyContext";
-import { useIssues as useIssuesApi, useProjects as useProjectsApi, useAgents as useAgentsApi } from "../api/hooks";
+import { useIssues as useIssuesApi, useProjects as useProjectsApi, useAgents as useAgentsApi, useIssueRuns, useRunLog, RunForIssue } from "../api/hooks";
 import { transformIssue, transformAgent } from "../api/transforms";
 import { api } from "../api/client";
 import { Markdown } from "../components/Markdown";
@@ -220,6 +220,52 @@ interface PanelIssue {
   description?: string | null;
 }
 
+// ── Run Log Item ──
+function RunLogItem({ run, agents }: { run: RunForIssue; agents: Agent[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: logText, loading: logLoading } = useRunLog(expanded ? run.runId : null);
+  const agent = agents.find(a => a.id === run.agentId);
+
+  const statusColor = run.status === "running" ? "var(--info)"
+    : run.status === "succeeded" ? "var(--ok)"
+    : run.status === "failed" ? "var(--err)"
+    : "var(--fg-3)";
+
+  const startLabel = run.startedAt
+    ? new Date(run.startedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : "—";
+
+  return (
+    <div style={{ borderBottom: "1px solid var(--border-0)" }}>
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}
+      >
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: statusColor, display: "inline-block", flexShrink: 0 }} />
+        <span style={{ fontSize: 12, color: "var(--fg-1)", flex: 1 }}>
+          {agent ? agent.name : run.agentId.slice(0, 8)}
+        </span>
+        <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{startLabel}</span>
+        <span style={{ fontSize: 11, color: statusColor, textTransform: "capitalize" }}>{run.status}</span>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: expanded ? "rotate(180deg)" : undefined, color: "var(--fg-3)", flexShrink: 0 }}>
+          <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {expanded && (
+        <div style={{ paddingBottom: 8 }}>
+          {logLoading ? (
+            <div style={{ fontSize: 11, color: "var(--fg-3)", padding: "4px 0" }}>Loading log…</div>
+          ) : logText ? (
+            <pre style={{ fontSize: 11, fontFamily: "monospace", color: "var(--fg-1)", background: "var(--bg-0)", border: "1px solid var(--border-0)", borderRadius: 4, padding: 8, maxHeight: 400, overflowY: "auto", overflowX: "auto", whiteSpace: "pre", margin: 0 }}>{logText}</pre>
+          ) : (
+            <div style={{ fontSize: 11, color: "var(--fg-3)", padding: "4px 0" }}>No log available.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IssueSidePanel({ issue, agents, companyId, onClose, onChanged }: {
   issue: PanelIssue;
   agents: Agent[];
@@ -228,6 +274,7 @@ function IssueSidePanel({ issue, agents, companyId, onClose, onChanged }: {
   onChanged: () => void;
 }) {
   const [saving, setSaving] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
   const a = agents.find(x => x.id === issue.assignee);
   const col = COLUMNS.find(c => c.id === issue.status);
   const openedByAgent = agents.find(x => x.id === issue.openedBy);
@@ -236,11 +283,25 @@ function IssueSidePanel({ issue, agents, companyId, onClose, onChanged }: {
     : issue.openedBy === "—" ? "—"
     : `${issue.openedBy.slice(0, 8)}…`;
 
+  const { data: runs, refetch: refetchRuns } = useIssueRuns(issue.rawId ?? null);
+  const hasRunning = (runs || []).some(r => r.status === "running");
+
+  // Poll every 5s while any run is in "running" state
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (hasRunning) {
+      pollRef.current = setInterval(() => refetchRuns(), 5000);
+    } else {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    }
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [hasRunning, refetchRuns]);
+
   async function changeStatus(newStatus: string) {
     if (!companyId || !issue.rawId || saving) return;
     setSaving(true);
     try {
-      await api.patch(`/companies/${companyId}/issues/${issue.rawId}`, { status: newStatus });
+      await api.patch(`/issues/${issue.rawId}`, { status: newStatus });
       onChanged();
     } catch {
       // surface failure silently — UI will not advance
@@ -307,6 +368,34 @@ function IssueSidePanel({ issue, agents, companyId, onClose, onChanged }: {
               <Markdown>{issue.description}</Markdown>
             ) : (
               <div style={{ fontSize: 13, color: "var(--fg-3)", fontStyle: "italic" }}>No description provided.</div>
+            )}
+          </div>
+          <div className="issue-panel-section">
+            <div
+              onClick={() => setLogsOpen(o => !o)}
+              style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: logsOpen ? "rotate(180deg)" : undefined, color: "var(--fg-3)", flexShrink: 0 }}>
+                <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="issue-panel-section-label" style={{ cursor: "pointer", margin: 0 }}>실행 로그</span>
+              {runs && runs.length > 0 && (
+                <span style={{ fontSize: 11, color: "var(--fg-3)", marginLeft: 2 }}>({runs.length})</span>
+              )}
+              {hasRunning && (
+                <span style={{ fontSize: 10, color: "var(--info)", marginLeft: 4 }}>● 실행 중</span>
+              )}
+            </div>
+            {logsOpen && (
+              <div style={{ marginTop: 6 }}>
+                {!runs || runs.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--fg-3)", fontStyle: "italic" }}>실행 기록이 없습니다.</div>
+                ) : (
+                  runs.map(run => (
+                    <RunLogItem key={run.runId} run={run} agents={agents} />
+                  ))
+                )}
+              </div>
             )}
           </div>
         </div>
