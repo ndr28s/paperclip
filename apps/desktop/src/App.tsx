@@ -14,7 +14,6 @@ import { ActivityPage } from "./pages/Activity";
 import { SettingsPage } from "./pages/Settings";
 import { GoalsPage } from "./pages/Goals";
 import { RoutinesPage } from "./pages/Routines";
-import { InboxPage } from "./pages/Inbox";
 import { Login } from "./pages/Login";
 import { getBaseUrl, api } from "./api/client";
 import { SessionProvider } from "./context/SessionContext";
@@ -78,7 +77,7 @@ function GlobalNotifier({ companyId }: { companyId: string | null }) {
   );
 }
 
-type Page = "dashboard" | "agents" | "issues" | "orgchart" | "approvals" | "projects" | "project-detail" | "meetings" | "usage" | "activity" | "settings" | "goals" | "routines" | "inbox" | string;
+type Page = "dashboard" | "agents" | "issues" | "orgchart" | "approvals" | "projects" | "project-detail" | "meetings" | "usage" | "activity" | "settings" | "goals" | "routines" | string;
 type AuthState = "loading" | "authenticated" | "unauthenticated";
 
 // ── 조직 생성 모달 (앱 최상위 레벨) ──
@@ -212,7 +211,7 @@ function AppShell({ authState, onLogout }: { authState: AuthState; onLogout: () 
     dashboard: "Dashboard", agents: "Agents", issues: "Issues",
     orgchart: "OrgChart", approvals: "Approvals", projects: "Projects",
     "project-detail": "Project", meetings: "Meetings", usage: "Usage", activity: "Activity",
-    settings: "Settings", goals: "Goals", routines: "Routines", inbox: "Inbox",
+    settings: "Settings", goals: "Goals", routines: "Routines",
   };
 
   const handleOpenProject = (id: string) => { setSelectedProjectId(id); setPage("project-detail"); };
@@ -242,7 +241,6 @@ function AppShell({ authState, onLogout }: { authState: AuthState; onLogout: () 
       case "settings":  return <SettingsPage />;
       case "goals":     return <GoalsPage />;
       case "routines":  return <RoutinesPage />;
-      case "inbox":     return <InboxPage onNavigate={setPage} />;
       default: return (
         <main className="main" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", color: "var(--fg-2)" }}>
