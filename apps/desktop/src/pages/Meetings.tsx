@@ -5,11 +5,12 @@ import { transformAgent, relativeTime } from "../api/transforms";
 import { api } from "../api/client";
 
 // ── Message bubble ──
-function MessageBubble({ msg, agentName, agentColor, agentInitials }: {
+function MessageBubble({ msg, agentName, agentColor, agentInitials, optimistic }: {
   msg: RawMeetingMessage;
   agentName: string;
   agentColor: string;
   agentInitials: string;
+  optimistic?: boolean;
 }) {
   const isUser = !!msg.authorUserId && !msg.authorAgentId;
   return (
@@ -17,6 +18,8 @@ function MessageBubble({ msg, agentName, agentColor, agentInitials }: {
       display: "flex", gap: 10, padding: "6px 20px",
       flexDirection: isUser ? "row-reverse" : "row",
       alignItems: "flex-start",
+      opacity: optimistic ? 0.55 : 1,
+      transition: "opacity 0.2s",
     }}>
       <div style={{
         width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
@@ -38,10 +41,54 @@ function MessageBubble({ msg, agentName, agentColor, agentInitials }: {
         }}>
           {msg.body}
         </div>
-        <div style={{ fontSize: 10, color: "var(--fg-3)", marginTop: 3 }}>
-          {relativeTime(msg.createdAt)}
-        </div>
+        {!optimistic && (
+          <div style={{ fontSize: 10, color: "var(--fg-3)", marginTop: 3 }}>
+            {relativeTime(msg.createdAt)}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+// ── Typing indicator (animated dots) ──
+function TypingIndicator({ agentName, agentColor, agentInitials }: {
+  agentName: string;
+  agentColor: string;
+  agentInitials: string;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 10, padding: "6px 20px", alignItems: "flex-start" }}>
+      <div style={{
+        width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+        background: agentColor, color: "#fff", fontSize: 11, fontWeight: 600,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        {agentInitials}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ fontSize: 11, color: "var(--fg-3)", marginBottom: 3 }}>{agentName}</div>
+        <div style={{
+          padding: "10px 14px", borderRadius: "4px 12px 12px 12px",
+          background: "var(--bg-2)", display: "flex", alignItems: "center", gap: 4,
+        }}>
+          {[0, 1, 2].map(i => (
+            <span key={i} style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: "var(--fg-3)",
+              display: "inline-block",
+              animation: `typing-dot 1.2s ${i * 0.2}s infinite ease-in-out`,
+            }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 10, color: "var(--fg-3)", marginTop: 3 }}>답변 작성 중…</div>
+      </div>
+      <style>{`
+        @keyframes typing-dot {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-5px); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -49,8 +96,15 @@ function MessageBubble({ msg, agentName, agentColor, agentInitials }: {
 export function MeetingsPage() {
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
-  const [starting, setStarting] = useState<string | null>(null); // agentId being started
+  const [starting, setStarting] = useState<string | null>(null);
+  // Optimistic messages: shown immediately after send, cleared when server confirms
+  const [optimisticMessages, setOptimisticMessages] = useState<RawMeetingMessage[]>([]);
+  // Typing indicator: true after user sends, false when agent message arrives
+  const [isAgentTyping, setIsAgentTyping] = useState(false);
+  const lastAgentMsgIdRef = useRef<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { companyId } = useCompany();
   const { data: rawAgents } = useAgentsApi(companyId);
@@ -74,20 +128,54 @@ export function MeetingsPage() {
     return () => clearInterval(id);
   }, [hasSession, refetchMessages]);
 
-  // Auto-scroll to bottom on new messages
+  // When new agent message arrives → clear typing indicator + optimistic messages
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
+    // Find the last agent message
+    const agentMsgs = messages.filter(m => !!m.authorAgentId);
+    if (agentMsgs.length === 0) return;
+    const lastAgentMsg = agentMsgs[agentMsgs.length - 1];
+    if (lastAgentMsg.id !== lastAgentMsgIdRef.current) {
+      lastAgentMsgIdRef.current = lastAgentMsg.id;
+      setIsAgentTyping(false);
+      setOptimisticMessages([]);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    }
+  }, [messages]);
+
+  // Clear optimistic messages when server messages include them
+  useEffect(() => {
+    if (!messages || optimisticMessages.length === 0) return;
+    // If server messages now contain the user's latest message, clear optimistic
+    const serverUserMsgs = messages.filter(m => !!m.authorUserId);
+    if (serverUserMsgs.length > 0) {
+      setOptimisticMessages([]);
+    }
+  }, [messages, optimisticMessages.length]);
+
+  // Auto-scroll on new messages or typing indicator change
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
-  }, [messages?.length]);
+  }, [messages?.length, optimisticMessages.length, isAgentTyping]);
+
+  // Reset state when session changes
+  useEffect(() => {
+    setOptimisticMessages([]);
+    setIsAgentTyping(false);
+    lastAgentMsgIdRef.current = null;
+  }, [session?.id]);
 
   const handleStartChat = useCallback(async (agentId: string) => {
     if (!companyId) return;
     setStarting(agentId);
     try {
       await api.post(`/companies/${companyId}/meeting-sessions`, { agentId });
-      refetchSession();
+      await refetchSession();
       setInputText("");
+      setOptimisticMessages([]);
+      setIsAgentTyping(false);
     } catch (err) {
       console.error("Failed to start chat:", err);
     } finally {
@@ -100,6 +188,8 @@ export function MeetingsPage() {
     try {
       await api.delete(`/companies/${companyId}/meeting-sessions/${session.id}`);
       refetchSession();
+      setOptimisticMessages([]);
+      setIsAgentTyping(false);
     } catch (err) {
       console.error("Failed to end chat:", err);
     }
@@ -107,15 +197,38 @@ export function MeetingsPage() {
 
   const handleSend = useCallback(async () => {
     if (!companyId || !session || !inputText.trim() || sending) return;
-    setSending(true);
     const text = inputText.trim();
+    setSending(true);
+    // 1. Clear input immediately
     setInputText("");
+    // Reset textarea height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+    // 2. Optimistically add message to transcript
+    const optimisticMsg: RawMeetingMessage = {
+      id: `optimistic-${Date.now()}`,
+      sessionId: session.id,
+      companyId: companyId,
+      authorUserId: "me",
+      authorAgentId: null,
+      body: text,
+      createdAt: new Date().toISOString(),
+    };
+    setOptimisticMessages(prev => [...prev, optimisticMsg]);
     try {
       await api.post(`/companies/${companyId}/meeting-sessions/${session.id}/messages`, { body: text });
+      // 3. Show typing indicator — agent is being woken up
+      setIsAgentTyping(true);
+      // Safety timeout: hide typing indicator after 3 minutes
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setIsAgentTyping(false), 180000);
       refetchMessages();
     } catch (err) {
       console.error("Failed to send message:", err);
+      // Restore input and remove optimistic message on failure
       setInputText(text);
+      setOptimisticMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
     } finally {
       setSending(false);
     }
@@ -180,7 +293,7 @@ export function MeetingsPage() {
                     <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: "var(--fg-0)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {agent.name}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--fg-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: 11, color: isActive ? "#34C98A" : "var(--fg-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {isStarting ? "연결 중…" : isActive ? "대화 중" : agent.role}
                     </div>
                   </div>
@@ -212,7 +325,10 @@ export function MeetingsPage() {
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg-0)" }}>{sessionAgent.name}</div>
                   <div style={{ fontSize: 12, color: "var(--fg-3)" }}>
                     {sessionAgent.role}
-                    <span style={{ color: "#34C98A", marginLeft: 8 }}>● 대화 중</span>
+                    {isAgentTyping
+                      ? <span style={{ color: "#F5A623", marginLeft: 8 }}>● 답변 작성 중</span>
+                      : <span style={{ color: "#34C98A", marginLeft: 8 }}>● 대화 중</span>
+                    }
                   </div>
                 </div>
                 <button
@@ -227,15 +343,13 @@ export function MeetingsPage() {
               </div>
 
               {/* Transcript */}
-              <div
-                ref={transcriptRef}
-                style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}
-              >
-                {(!messages || messages.length === 0) && (
+              <div ref={transcriptRef} style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+                {(!messages || messages.length === 0) && optimisticMessages.length === 0 && (
                   <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>
                     {sessionAgent.name}와 대화를 시작하세요
                   </div>
                 )}
+                {/* Confirmed messages from server */}
                 {messages?.map(msg => (
                   <MessageBubble
                     key={msg.id}
@@ -245,15 +359,24 @@ export function MeetingsPage() {
                     agentInitials={sessionAgent.initials}
                   />
                 ))}
-                {sending && (
-                  <div style={{ padding: "6px 20px", display: "flex", justifyContent: "flex-end" }}>
-                    <div style={{
-                      padding: "9px 13px", borderRadius: "12px 4px 12px 12px",
-                      background: "var(--accent)", color: "white", fontSize: 13, opacity: 0.5,
-                    }}>
-                      전송 중…
-                    </div>
-                  </div>
+                {/* Optimistic (not yet confirmed) messages */}
+                {optimisticMessages.map(msg => (
+                  <MessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    agentName={sessionAgent.name}
+                    agentColor={sessionAgent.color}
+                    agentInitials={sessionAgent.initials}
+                    optimistic
+                  />
+                ))}
+                {/* Typing indicator */}
+                {isAgentTyping && (
+                  <TypingIndicator
+                    agentName={sessionAgent.name}
+                    agentColor={sessionAgent.color}
+                    agentInitials={sessionAgent.initials}
+                  />
                 )}
               </div>
 
@@ -268,8 +391,14 @@ export function MeetingsPage() {
                   borderRadius: 10, padding: "8px 12px",
                 }}>
                   <textarea
+                    ref={textareaRef}
                     value={inputText}
-                    onChange={e => setInputText(e.target.value)}
+                    onChange={e => {
+                      setInputText(e.target.value);
+                      // Auto-resize
+                      e.target.style.height = "auto";
+                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+                    }}
                     onKeyDown={e => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -284,11 +413,6 @@ export function MeetingsPage() {
                       color: "var(--fg-0)", fontSize: 13, resize: "none",
                       lineHeight: 1.5, maxHeight: 120, overflowY: "auto",
                       fontFamily: "inherit",
-                    }}
-                    onInput={e => {
-                      const el = e.currentTarget;
-                      el.style.height = "auto";
-                      el.style.height = Math.min(el.scrollHeight, 120) + "px";
                     }}
                   />
                   <button
@@ -312,10 +436,7 @@ export function MeetingsPage() {
               </div>
             </>
           ) : (
-            <div style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-              color: "var(--fg-3)",
-            }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-3)" }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.3 }}>💬</div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--fg-1)", marginBottom: 6 }}>
