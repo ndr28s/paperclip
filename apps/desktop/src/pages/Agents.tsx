@@ -385,8 +385,80 @@ interface ConnTestResult {
   checks: { label: string; status: "pass" | "warn" | "fail"; message?: string }[];
 }
 
+// ── Adapter Config Editor ──
+function AdapterConfigEditor({ rawAgent, onSaved }: { rawAgent: RawAgent; onSaved: () => void }) {
+  const cfg = (rawAgent.adapterConfig ?? {}) as Record<string, string>;
+  const [baseUrl, setBaseUrl] = useState<string>(String(cfg.baseUrl ?? ""));
+  const [model, setModel] = useState<string>(String(cfg.model ?? ""));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    setSaved(false);
+    try {
+      await api.patch(`/agents/${rawAgent.id}`, {
+        adapterConfig: { ...cfg, baseUrl: baseUrl.trim(), model: model.trim() },
+        replaceAdapterConfig: false,
+      });
+      setSaved(true);
+      onSaved();
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setSaveError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputStyle = {
+    display: "block", width: "100%", background: "var(--bg-2)",
+    border: "1px solid var(--border-1)", borderRadius: 5,
+    padding: "5px 8px", color: "var(--fg-0)", fontSize: 11,
+    marginTop: 3, boxSizing: "border-box" as const,
+  };
+
+  return (
+    <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--bg-2)", borderRadius: 6, border: "1px solid var(--border-1)" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-2)", marginBottom: 8 }}>어댑터 설정</div>
+      <label style={{ fontSize: 11, color: "var(--fg-2)" }}>
+        Base URL
+        <input
+          type="text"
+          value={baseUrl}
+          onChange={e => setBaseUrl(e.target.value)}
+          placeholder="http://host.docker.internal:8000/v1"
+          style={inputStyle}
+        />
+      </label>
+      <label style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, display: "block" }}>
+        Model ID
+        <input
+          type="text"
+          value={model}
+          onChange={e => setModel(e.target.value)}
+          placeholder="예: Qwen/Qwen3-8B"
+          style={inputStyle}
+        />
+      </label>
+      {saveError && <div style={{ fontSize: 11, color: "var(--err)", marginTop: 6 }}>{saveError}</div>}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+        <button
+          className="btn primary"
+          style={{ fontSize: 11, padding: "3px 10px", height: 26 }}
+          onClick={handleSave}
+          disabled={saving}
+        >{saving ? "저장 중…" : "저장"}</button>
+        {saved && <span style={{ fontSize: 11, color: "var(--ok)" }}>✓ 저장됨</span>}
+      </div>
+    </div>
+  );
+}
+
 // ── Agent Detail ──
-function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssignTask }: { agent: Agent; rawAgent: RawAgent | undefined; companyId: string | null; onClose: () => void; onOpenChat: (agent: Agent) => void; onAssignTask: () => void }) {
+function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssignTask, onRefresh }: { agent: Agent; rawAgent: RawAgent | undefined; companyId: string | null; onClose: () => void; onOpenChat: (agent: Agent) => void; onAssignTask: () => void; onRefresh: () => void }) {
   const pct = Math.min(100, (agent.spent / agent.budget) * 100);
   const barClass = pct >= 100 ? "over" : pct >= 80 ? "warn" : "";
   const tools = TOOLS_BY_ROLE[agent.role] || ["slack", "github"];
@@ -395,6 +467,7 @@ function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssign
   const [connTesting, setConnTesting] = useState(false);
   const [connResult, setConnResult] = useState<ConnTestResult | null>(null);
   const [connError, setConnError] = useState<string | null>(null);
+  const [showConfigEditor, setShowConfigEditor] = useState(false);
 
   async function runConnectionTest() {
     if (!companyId || !rawAgent?.adapterType || connTesting) return;
@@ -478,7 +551,7 @@ function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssign
           </div>
           {rawAgent?.adapterType && (
             <div style={{ marginTop: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 12, color: "var(--fg-2)" }}>Adapter: <span style={{ color: "var(--fg-1)" }}>{rawAgent.adapterType}</span></span>
                 <button
                   className="btn"
@@ -488,7 +561,20 @@ function AgentDetail({ agent, rawAgent, companyId, onClose, onOpenChat, onAssign
                 >
                   {connTesting ? "테스트 중…" : "연결 테스트"}
                 </button>
+                <button
+                  className="btn"
+                  style={{ fontSize: 11, padding: "2px 8px", height: 24 }}
+                  onClick={() => setShowConfigEditor(v => !v)}
+                >
+                  {showConfigEditor ? "설정 닫기" : "설정 편집"}
+                </button>
               </div>
+              {showConfigEditor && (
+                <AdapterConfigEditor
+                  rawAgent={rawAgent}
+                  onSaved={() => { onRefresh(); setConnResult(null); }}
+                />
+              )}
               {connError && (
                 <div style={{ fontSize: 12, color: "var(--err)", marginTop: 4 }}>
                   <span style={{ marginRight: 4 }}>✗</span>{connError}
@@ -713,7 +799,7 @@ export function Agents({ onNavigate, initialAction, onActionHandled }: {
           )}
         </div>
 
-        {view === "list" && selected && <AgentDetail agent={selected} rawAgent={rawAgents?.find(r => r.id === selected.id)} companyId={companyId} onClose={() => setSelectedId(null)} onOpenChat={handleOpenChat} onAssignTask={() => setAssignModalAgent(selected)} />}
+        {view === "list" && selected && <AgentDetail agent={selected} rawAgent={rawAgents?.find(r => r.id === selected.id)} companyId={companyId} onClose={() => setSelectedId(null)} onOpenChat={handleOpenChat} onAssignTask={() => setAssignModalAgent(selected)} onRefresh={refetchAgents} />}
       </div>
       <AssignTaskModal
         agent={assignModalAgent}
