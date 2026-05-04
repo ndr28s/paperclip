@@ -3,8 +3,13 @@ import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 export const authUsers = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email").notNull(),
+  // Email is now optional — the username plugin is the primary identifier.
+  // The column stays so historical email-based accounts keep their address,
+  // and so that any future opt-in email features can write to it.
+  email: text("email"),
   emailVerified: boolean("email_verified").notNull().default(false),
+  username: text("username").unique(),
+  displayUsername: text("display_username"),
   image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),

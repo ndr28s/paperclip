@@ -3,6 +3,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { toNodeHandler } from "better-auth/node";
+import { username } from "better-auth/plugins";
 import type { Db } from "@paperclipai/db";
 import {
   authAccounts,
@@ -94,11 +95,19 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins?
         verification: authVerifications,
       },
     }),
+    // Username + password is the canonical login path (via the username
+    // plugin's POST /sign-in/username). The plugin adds username
+    // validation but does NOT provide its own sign-up endpoint, so
+    // emailAndPassword stays enabled to handle account creation through
+    // POST /sign-up/email — clients pass `username` alongside a synthetic
+    // `email` (e.g. "<username>@paperclip.local"). Existing email-based
+    // accounts continue to log in via /sign-in/email as legacy fallback.
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
       disableSignUp: config.authDisableSignUp,
     },
+    plugins: [username()],
     ...(isHttpOnly ? { advanced: { useSecureCookies: false } } : {}),
   };
 

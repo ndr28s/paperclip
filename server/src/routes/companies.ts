@@ -266,7 +266,11 @@ export function companyRoutes(db: Db, storage?: StorageService) {
 
   router.post("/", validate(createCompanySchema), async (req, res) => {
     assertBoard(req);
-    if (!(req.actor.source === "local_implicit" || req.actor.isInstanceAdmin)) {
+    // Allow the very first organization a user creates: a freshly signed-up
+    // user with zero active memberships needs to be able to bootstrap their
+    // own company before any instance admin exists.
+    const hasNoCompany = !req.actor.memberships || req.actor.memberships.length === 0;
+    if (!(req.actor.source === "local_implicit" || req.actor.isInstanceAdmin || hasNoCompany)) {
       throw forbidden("Instance admin required");
     }
     const company = await svc.create(req.body);

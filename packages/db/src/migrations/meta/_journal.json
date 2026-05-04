@@ -435,6 +435,13 @@
       "when": 1776500002000,
       "tag": "0061_remove_hidden_issue_id",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1776500003000,
+      "tag": "0062_username_auth",
+      "breakpoints": true
     }
   ]
 }
