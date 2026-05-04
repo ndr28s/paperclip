@@ -18,6 +18,41 @@ export function meetingService(db: Db) {
       return row ?? null;
     },
 
+    /**
+     * Returns the active session for a specific (company, agent) pair.
+     * `agentId === null` matches sessions that are not bound to any agent.
+     */
+    getActiveSessionForAgent: async (
+      companyId: string,
+      agentId: string | null,
+    ): Promise<MeetingSession | null> => {
+      const [row] = await db
+        .select()
+        .from(meetingSessions)
+        .where(
+          and(
+            eq(meetingSessions.companyId, companyId),
+            isNull(meetingSessions.endedAt),
+            agentId === null
+              ? isNull(meetingSessions.agentId)
+              : eq(meetingSessions.agentId, agentId),
+          ),
+        )
+        .orderBy(asc(meetingSessions.createdAt))
+        .limit(1);
+      return row ?? null;
+    },
+
+    listActiveSessions: async (companyId: string): Promise<MeetingSession[]> => {
+      return db
+        .select()
+        .from(meetingSessions)
+        .where(
+          and(eq(meetingSessions.companyId, companyId), isNull(meetingSessions.endedAt)),
+        )
+        .orderBy(asc(meetingSessions.createdAt));
+    },
+
     createSession: async (companyId: string, agentId?: string | null): Promise<MeetingSession> => {
       const [row] = await db
         .insert(meetingSessions)
