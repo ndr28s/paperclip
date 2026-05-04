@@ -4121,7 +4121,13 @@ export function heartbeatService(db: Db) {
               : null;
           const fallbackText =
             typeof resultJsonResult === "string" ? resultJsonResult.trim() : "";
-          const responseText = summaryText || fallbackText;
+          const rawResponseText = summaryText || fallbackText;
+          // Strip <think>...</think> blocks emitted by reasoning models
+          // (Qwen3, DeepSeek, etc.) before posting to the meeting chat —
+          // users should see the answer, not the chain of thought.
+          const responseText = rawResponseText
+            .replace(/<think>[\s\S]*?<\/think>/gi, "")
+            .trim();
           if (responseText) {
             try {
               await meetingsSvc.addAgentMessage(
