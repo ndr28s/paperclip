@@ -399,11 +399,23 @@ interface ConnTestResult {
   checks: ConnTestCheck[];
 }
 
+const HERMES_PROVIDERS = ["auto","anthropic","openrouter","custom","huggingface","copilot","minimax","kilocode"] as const;
+
 // ── Adapter Config Editor ──
 function AdapterConfigEditor({ rawAgent, onSaved }: { rawAgent: RawAgent; onSaved: () => void }) {
   const cfg = (rawAgent.adapterConfig ?? {}) as Record<string, string>;
+  const [adapterType, setAdapterType] = useState<string>(rawAgent.adapterType ?? "hermes_local");
+  // openai_compatible fields
   const [baseUrl, setBaseUrl] = useState<string>(String(cfg.baseUrl ?? ""));
   const [model, setModel] = useState<string>(String(cfg.model ?? ""));
+  // hermes_local fields
+  const [hermesProvider, setHermesProvider] = useState<string>(String(cfg.provider ?? "auto"));
+  const [hermesModel, setHermesModel] = useState<string>(String(cfg.model ?? ""));
+  const [hermesBaseUrl, setHermesBaseUrl] = useState<string>(String(cfg.baseUrl ?? ""));
+  // process fields
+  const [command, setCommand] = useState<string>(String(cfg.command ?? ""));
+  const [cwd, setCwd] = useState<string>(String(cfg.cwd ?? ""));
+
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -413,9 +425,21 @@ function AdapterConfigEditor({ rawAgent, onSaved }: { rawAgent: RawAgent; onSave
     setSaveError(null);
     setSaved(false);
     try {
+      let newConfig: Record<string, string> = {};
+      if (adapterType === "openai_compatible") {
+        newConfig = { baseUrl: baseUrl.trim(), model: model.trim() };
+      } else if (adapterType === "hermes_local") {
+        newConfig = { provider: hermesProvider, model: hermesModel.trim() };
+        if (hermesProvider === "custom" && hermesBaseUrl.trim()) {
+          newConfig.baseUrl = hermesBaseUrl.trim();
+        }
+      } else if (adapterType === "process") {
+        newConfig = { command: command.trim(), ...(cwd.trim() ? { cwd: cwd.trim() } : {}) };
+      }
       await api.patch(`/agents/${rawAgent.id}`, {
-        adapterConfig: { ...cfg, baseUrl: baseUrl.trim(), model: model.trim() },
-        replaceAdapterConfig: false,
+        adapterType,
+        adapterConfig: newConfig,
+        replaceAdapterConfig: true,
       });
       setSaved(true);
       onSaved();
@@ -437,34 +461,80 @@ function AdapterConfigEditor({ rawAgent, onSaved }: { rawAgent: RawAgent; onSave
   return (
     <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--bg-2)", borderRadius: 6, border: "1px solid var(--border-1)" }}>
       <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-2)", marginBottom: 8 }}>어댑터 설정</div>
-      <label style={{ fontSize: 11, color: "var(--fg-2)" }}>
-        Base URL
-        <input
-          type="text"
-          value={baseUrl}
-          onChange={e => setBaseUrl(e.target.value)}
-          placeholder="http://host.docker.internal:8000/v1"
-          style={inputStyle}
-        />
+
+      <label style={{ fontSize: 11, color: "var(--fg-2)", display: "block", marginBottom: 8 }}>
+        어댑터 타입
+        <select value={adapterType} onChange={e => setAdapterType(e.target.value)} style={{ ...inputStyle, marginTop: 3 }}>
+          <option value="hermes_local">hermes_local — 로컬 LLM / Claude / 기타 (권장)</option>
+          <option value="openai_compatible">openai_compatible — OpenAI 호환 API (미팅만)</option>
+          <option value="claude_local">claude_local — Claude CLI</option>
+          <option value="process">process — 커스텀 실행 파일</option>
+        </select>
       </label>
-      <label style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, display: "block" }}>
-        Model ID
-        <input
-          type="text"
-          value={model}
-          onChange={e => setModel(e.target.value)}
-          placeholder="예: Qwen/Qwen3-8B"
-          style={inputStyle}
-        />
-      </label>
+
+      {adapterType === "hermes_local" && (
+        <>
+          <label style={{ fontSize: 11, color: "var(--fg-2)", display: "block" }}>
+            Provider
+            <select value={hermesProvider} onChange={e => setHermesProvider(e.target.value)} style={{ ...inputStyle, marginTop: 3 }}>
+              {HERMES_PROVIDERS.map(p => (
+                <option key={p} value={p}>{p}{p === "custom" ? " (로컬 LLM / Ollama / vLLM)" : p === "auto" ? " (모델명으로 자동 감지)" : ""}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, display: "block" }}>
+            Model
+            <input type="text" value={hermesModel} onChange={e => setHermesModel(e.target.value)}
+              placeholder={hermesProvider === "anthropic" ? "anthropic/claude-sonnet-4" : hermesProvider === "custom" ? "Qwen/Qwen3-8B" : "provider/model-name"}
+              style={inputStyle} />
+          </label>
+          {hermesProvider === "custom" && (
+            <label style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, display: "block" }}>
+              Base URL
+              <input type="text" value={hermesBaseUrl} onChange={e => setHermesBaseUrl(e.target.value)}
+                placeholder="http://host.docker.internal:8000/v1"
+                style={inputStyle} />
+            </label>
+          )}
+        </>
+      )}
+
+      {adapterType === "openai_compatible" && (
+        <>
+          <label style={{ fontSize: 11, color: "var(--fg-2)", display: "block" }}>
+            Base URL
+            <input type="text" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}
+              placeholder="http://host.docker.internal:8000/v1" style={inputStyle} />
+          </label>
+          <label style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, display: "block" }}>
+            Model ID
+            <input type="text" value={model} onChange={e => setModel(e.target.value)}
+              placeholder="예: Qwen/Qwen3-8B" style={inputStyle} />
+          </label>
+        </>
+      )}
+
+      {adapterType === "process" && (
+        <>
+          <label style={{ fontSize: 11, color: "var(--fg-2)", display: "block" }}>
+            Command *
+            <input type="text" value={command} onChange={e => setCommand(e.target.value)}
+              placeholder="예: /usr/local/bin/hermes" style={inputStyle} />
+          </label>
+          <label style={{ fontSize: 11, color: "var(--fg-2)", marginTop: 8, display: "block" }}>
+            Working Directory (선택)
+            <input type="text" value={cwd} onChange={e => setCwd(e.target.value)}
+              placeholder="예: /app" style={inputStyle} />
+          </label>
+        </>
+      )}
+
       {saveError && <div style={{ fontSize: 11, color: "var(--err)", marginTop: 6 }}>{saveError}</div>}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-        <button
-          className="btn primary"
-          style={{ fontSize: 11, padding: "3px 10px", height: 26 }}
-          onClick={handleSave}
-          disabled={saving}
-        >{saving ? "저장 중…" : "저장"}</button>
+        <button className="btn primary" style={{ fontSize: 11, padding: "3px 10px", height: 26 }}
+          onClick={handleSave} disabled={saving}>
+          {saving ? "저장 중…" : "저장"}
+        </button>
         {saved && <span style={{ fontSize: 11, color: "var(--ok)" }}>✓ 저장됨</span>}
       </div>
     </div>

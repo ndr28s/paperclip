@@ -111,20 +111,29 @@ export function MeetingsPage() {
   const { data: rawAgents } = useAgentsApi(companyId);
   const { data: activeSessions, refetch: refetchSessions } = useActiveSessions(companyId);
 
+  // Local optimistic sessions — added immediately after POST, before poll catches up
+  const [localSessions, setLocalSessions] = useState<RawMeetingSession[]>([]);
+
   const agents = useMemo(() => {
     if (!rawAgents) return [];
     return rawAgents.map(r => transformAgent(r));
   }, [rawAgents]);
 
-  // Active session for each agent
+  // Active session for each agent (server data takes priority; local fills gaps)
   const sessionByAgentId = useMemo(() => {
     const map: Record<string, RawMeetingSession> = {};
-    if (!activeSessions) return map;
-    for (const s of activeSessions) {
+    // Local optimistic first (lower priority)
+    for (const s of localSessions) {
       if (s.agentId) map[s.agentId] = s;
     }
+    // Server-fetched sessions overwrite (higher priority)
+    if (activeSessions) {
+      for (const s of activeSessions) {
+        if (s.agentId) map[s.agentId] = s;
+      }
+    }
     return map;
-  }, [activeSessions]);
+  }, [activeSessions, localSessions]);
 
   const viewAgent = selectedAgentId ? agents.find(a => a.id === selectedAgentId) ?? null : null;
   const viewSession = viewAgent ? sessionByAgentId[viewAgent.id] ?? null : null;
@@ -180,14 +189,17 @@ export function MeetingsPage() {
     if (!companyId) return;
     setStarting(agentId);
     try {
-      await api.post(`/companies/${companyId}/meeting-sessions`, { agentId });
-      await refetchSessions();
+      // POST returns the new session — use it immediately so viewSession updates
+      // before the background poll catches up (refetchSessions is void/async).
+      const newSession = await api.post<RawMeetingSession>(`/companies/${companyId}/meeting-sessions`, { agentId });
+      setLocalSessions(prev => [...prev.filter(s => s.agentId !== agentId), newSession]);
       setSelectedAgentId(agentId);
       setInputText("");
       // Reset per-agent state
       lastMsgIdRef.current[agentId] = null;
       setTypingMap(prev => ({ ...prev, [agentId]: false }));
       setOptimisticMap(prev => ({ ...prev, [agentId]: [] }));
+      refetchSessions(); // background sync
     } catch (err) {
       console.error("Failed to start chat:", err);
     } finally {
@@ -199,10 +211,12 @@ export function MeetingsPage() {
     if (!companyId) return;
     try {
       await api.delete(`/companies/${companyId}/meeting-sessions/${sessionId}`);
-      await refetchSessions();
+      // Remove from local sessions immediately so the UI updates without waiting for poll
+      setLocalSessions(prev => prev.filter(s => s.id !== sessionId));
       setTypingMap(prev => ({ ...prev, [agentId]: false }));
       setOptimisticMap(prev => ({ ...prev, [agentId]: [] }));
       if (typingTimeoutRef.current[agentId]) clearTimeout(typingTimeoutRef.current[agentId]);
+      refetchSessions(); // background sync
     } catch (err) {
       console.error("Failed to end chat:", err);
     }
