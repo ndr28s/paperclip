@@ -54,6 +54,7 @@ import {
   sanitizeRuntimeServiceBaseEnv,
 } from "./workspace-runtime.js";
 import { issueService } from "./issues.js";
+import { meetingService } from "./meetings.js";
 import { executionWorkspaceService, mergeExecutionWorkspaceConfig } from "./execution-workspaces.js";
 import { workspaceOperationService } from "./workspace-operations.js";
 import { isProcessGroupAlive, terminateLocalService } from "./local-service-supervisor.js";
@@ -1025,12 +1026,10 @@ function buildHermesContextOverlay(opts: {
       lines.push(
         "## How to Reply (required)",
         "",
-        "Post your reply with this curl command — replace YOUR_REPLY_HERE with your actual message:",
-        "```",
-        `curl -s -X POST "$PAPERCLIP_API_URL/companies/$PAPERCLIP_COMPANY_ID/meeting-sessions/${sessionId}/agent-messages" -H "Content-Type: application/json" -d '{"body":"YOUR_REPLY_HERE"}'`,
-        "```",
-        "",
-        "Be concise and conversational. Reply to the user's last message above, then you are done.",
+        "Write your reply as plain text below. The system will automatically capture",
+        "your output and deliver it to the user — do NOT call any API or run curl.",
+        "Reply to the user's last message above, keep it concise and conversational,",
+        "then stop.",
       );
       return {
         taskId: `meeting:${sessionId}`,
@@ -1688,6 +1687,7 @@ export function heartbeatService(db: Db) {
   const secretsSvc = secretService(db);
   const companySkills = companySkillService(db);
   const issuesSvc = issueService(db);
+  const meetingsSvc = meetingService(db);
   const executionWorkspacesSvc = executionWorkspaceService(db);
   const workspaceOperationsSvc = workspaceOperationService(db);
   const activeRunExecutions = new Set<string>();
@@ -4104,6 +4104,41 @@ export function heartbeatService(db: Db) {
         },
         authToken: authToken ?? undefined,
       });
+      // Meeting chat wake: capture the adapter's reply and persist it as the
+      // agent's meeting message instead of expecting the adapter to call the
+      // /agent-messages API itself. Hermes (and any adapter that doesn't get
+      // PAPERCLIP_API_KEY injected) cannot authenticate against that route, so
+      // routing the reply through the heartbeat is the reliable path.
+      {
+        const wakeReason = readNonEmptyString(context.wakeReason);
+        const meetingSessionId = readNonEmptyString(context.sessionId);
+        if (wakeReason === "meeting_message" && meetingSessionId) {
+          const summaryText =
+            typeof adapterResult.summary === "string" ? adapterResult.summary.trim() : "";
+          const resultJsonResult =
+            adapterResult.resultJson && typeof adapterResult.resultJson === "object"
+              ? (adapterResult.resultJson as Record<string, unknown>).result
+              : null;
+          const fallbackText =
+            typeof resultJsonResult === "string" ? resultJsonResult.trim() : "";
+          const responseText = summaryText || fallbackText;
+          if (responseText) {
+            try {
+              await meetingsSvc.addAgentMessage(
+                meetingSessionId,
+                agent.companyId,
+                agent.id,
+                responseText,
+              );
+            } catch (err) {
+              logger.warn(
+                { err, meetingSessionId, runId: run.id, agentId: agent.id },
+                "failed to auto-save meeting agent reply",
+              );
+            }
+          }
+        }
+      }
       const adapterManagedRuntimeServices = adapterResult.runtimeServices
         ? await persistAdapterManagedRuntimeServices({
             db,

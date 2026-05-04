@@ -581,7 +581,7 @@ export function renderPaperclipWakePrompt(
   }
 
   if (normalized.meetingSession) {
-    const { sessionId, messages } = normalized.meetingSession;
+    const { messages } = normalized.meetingSession;
     lines.push("## Meeting Conversation", "");
     if (messages.length === 0) {
       lines.push("(no messages yet)", "");
@@ -596,13 +596,10 @@ export function renderPaperclipWakePrompt(
     lines.push(
       "## How to Reply",
       "",
-      "Post your response to the meeting chat using the agent-messages API:",
-      "```",
-      `printf '%s' '<json>' | python3 -c "$PAPERCLIP_POST_JSON" /api/companies/$PAPERCLIP_COMPANY_ID/meeting-sessions/${sessionId}/agent-messages`,
-      "```",
-      `where <json> is: {"body": "your reply here"}`,
-      "",
-      "Reply directly to the user's last message above. Be concise and conversational.",
+      "Write your reply as plain text. The Paperclip server captures your output",
+      "automatically and posts it to the meeting chat — do NOT call any API or run curl.",
+      "Reply directly to the user's last message above. Be concise and conversational,",
+      "then stop.",
     );
   }
 
