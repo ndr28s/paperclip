@@ -71,6 +71,20 @@ export function approvalRoutes(db: Db) {
       : [];
     const uniqueIssueIds = Array.from(new Set(issueIds));
     const { issueIds: _issueIds, ...approvalInput } = req.body;
+    // Auto-fill payload.reportsTo with the requesting agent when an agent is
+    // creating a hire_agent approval and didn't specify one. This makes the
+    // org chart hierarchy correct out of the box (e.g. CEO hiring CTO →
+    // CTO.reportsTo = CEO) without requiring the agent to know its own id.
+    if (
+      approvalInput.type === "hire_agent" &&
+      req.actor.type === "agent" &&
+      req.actor.agentId
+    ) {
+      const payload = approvalInput.payload as Record<string, unknown>;
+      if (payload.reportsTo === undefined || payload.reportsTo === null) {
+        approvalInput.payload = { ...payload, reportsTo: req.actor.agentId };
+      }
+    }
     const normalizedPayload =
       approvalInput.type === "hire_agent"
         ? await secretsSvc.normalizeHireApprovalPayloadForPersistence(
