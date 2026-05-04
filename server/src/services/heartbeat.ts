@@ -4125,8 +4125,12 @@ export function heartbeatService(db: Db) {
           // Strip <think>...</think> blocks emitted by reasoning models
           // (Qwen3, DeepSeek, etc.) before posting to the meeting chat —
           // users should see the answer, not the chain of thought.
+          // Some models also emit only </think> at the end of an unbracketed
+          // reasoning preamble; treat everything before the first </think> as
+          // chain of thought too.
           const responseText = rawResponseText
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
+            .replace(/^[\s\S]*?<\/think>/i, "")
             .trim();
           if (responseText) {
             try {
