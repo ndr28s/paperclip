@@ -52,7 +52,7 @@ import { createPluginDevWatcher } from "./services/plugin-dev-watcher.js";
 import { createPluginHostServiceCleanup } from "./services/plugin-host-service-cleanup.js";
 import { pluginRegistryService } from "./services/plugin-registry.js";
 import { createHostClientHandlers } from "@paperclipai/plugin-sdk";
-import type { BetterAuthSessionResult } from "./auth/better-auth.js";
+import type { BetterAuthInstance, BetterAuthSessionResult } from "./auth/better-auth.js";
 import { createCachedViteHtmlRenderer } from "./vite-html-renderer.js";
 
 type UiMode = "none" | "static" | "vite-dev";
@@ -124,6 +124,7 @@ export async function createApp(
     hostVersion?: string;
     localPluginDir?: string;
     betterAuthHandler?: express.RequestHandler;
+    auth?: BetterAuthInstance;
     resolveSession?: (req: ExpressRequest) => Promise<BetterAuthSessionResult | null>;
   },
 ) {
@@ -159,7 +160,7 @@ export async function createApp(
       resolveSession: opts.resolveSession,
     }),
   );
-  app.use("/api/auth", authRoutes(db));
+  app.use("/api/auth", authRoutes(db, opts.auth));
   if (opts.betterAuthHandler) {
     app.all("/api/auth/{*authPath}", opts.betterAuthHandler);
   }

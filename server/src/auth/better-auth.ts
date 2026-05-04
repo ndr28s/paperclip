@@ -24,7 +24,7 @@ export type BetterAuthSessionResult = {
   user: BetterAuthSessionUser | null;
 };
 
-type BetterAuthInstance = ReturnType<typeof betterAuth>;
+export type BetterAuthInstance = ReturnType<typeof betterAuth>;
 
 function headersFromNodeHeaders(rawHeaders: IncomingHttpHeaders): Headers {
   const headers = new Headers();

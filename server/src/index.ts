@@ -459,6 +459,7 @@ export async function startServer(): Promise<StartedServer> {
   
   let authReady = config.deploymentMode === "local_trusted";
   let betterAuthHandler: RequestHandler | undefined;
+  let authInstance: import("./auth/better-auth.js").BetterAuthInstance | undefined;
   let resolveSession:
     | ((req: ExpressRequest) => Promise<BetterAuthSessionResult | null>)
     | undefined;
@@ -495,6 +496,7 @@ export async function startServer(): Promise<StartedServer> {
       "Authenticated mode auth origin configuration",
     );
     const auth = createBetterAuthInstance(db as any, config, effectiveTrustedOrigins);
+    authInstance = auth;
     betterAuthHandler = createBetterAuthHandler(auth);
     resolveSession = (req) => resolveBetterAuthSession(auth, req);
     resolveSessionFromHeaders = (headers) => resolveBetterAuthSessionFromHeaders(auth, headers);
@@ -533,6 +535,7 @@ export async function startServer(): Promise<StartedServer> {
     authReady,
     companyDeletionEnabled: config.companyDeletionEnabled,
     betterAuthHandler,
+    auth: authInstance,
     resolveSession,
   });
   const server = createServer(app as unknown as Parameters<typeof createServer>[0]);
