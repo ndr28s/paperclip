@@ -995,8 +995,53 @@ function buildHermesContextOverlay(opts: {
   pastExperience: string[];
 }): Record<string, unknown> {
   const { issueContext, context, enableAutoSkillCreation, pastExperience } = opts;
-  if (!issueContext) return {};
   const wakeReason = readNonEmptyString(context.wakeReason);
+
+  // ── Meeting chat wakeup: inject meeting context even without an issue ──
+  if (!issueContext && wakeReason === "meeting_message") {
+    const wakePayload = context[PAPERCLIP_WAKE_PAYLOAD_KEY] as Record<string, unknown> | null | undefined;
+    const meetingSession = wakePayload?.meetingSession as {
+      sessionId: string;
+      messages: Array<{ body: string; authorType?: string; authorName?: string | null; createdAt?: string }>;
+    } | null | undefined;
+    if (meetingSession?.sessionId) {
+      const { sessionId, messages } = meetingSession;
+      const lines = [
+        "⚠️  MEETING CHAT WAKE — this is NOT a regular issue task.",
+        "Your ONLY job is to reply to the user's message in the meeting chat below.",
+        "Do NOT mark any issue as done. Do NOT post issue comments. Just reply to the meeting.",
+        "",
+        "## Meeting Conversation",
+        "",
+      ];
+      if (messages.length === 0) {
+        lines.push("(no messages yet)", "");
+      } else {
+        for (const msg of messages) {
+          const who = msg.authorType === "agent" ? (msg.authorName ?? "agent") : "user";
+          lines.push(`[${who}] ${msg.body}`, "");
+        }
+      }
+      lines.push(
+        "## How to Reply (required)",
+        "",
+        "Post your reply with this curl command — replace YOUR_REPLY_HERE with your actual message:",
+        "```",
+        `curl -s -X POST "$PAPERCLIP_API_URL/companies/$PAPERCLIP_COMPANY_ID/meeting-sessions/${sessionId}/agent-messages" -H "Content-Type: application/json" -d '{"body":"YOUR_REPLY_HERE"}'`,
+        "```",
+        "",
+        "Be concise and conversational. Reply to the user's last message above, then you are done.",
+      );
+      return {
+        taskId: `meeting:${sessionId}`,
+        taskTitle: "Meeting Chat",
+        taskBody: lines.join("\n"),
+        wakeReason,
+      };
+    }
+  }
+
+  if (!issueContext) return {};
   let taskBody = issueContext.description ?? "";
   if (enableAutoSkillCreation) taskBody += HERMES_SKILL_PROPOSAL_HINT;
   if (pastExperience.length > 0) {
