@@ -448,6 +448,11 @@ export async function execute(
       "Be concise and action-oriented.",
     ].join(" "),
   );
+  // Server may inject the agent's onboarding bundle (AGENTS.md / HEARTBEAT.md /
+  // SOUL.md / TOOLS.md) here when the adapter doesn't materialize one on disk.
+  // It's the substantive policy doc — delegation rules, tool usage, etc. —
+  // that bundle-supporting adapters get via filesystem.
+  const agentInstructionsBundle = asString(config.paperclipAgentInstructions, "").trim();
   const promptTemplate = asString(
     config.promptTemplate,
     "You are agent {{agent.id}} ({{agent.name}}). Continue your Paperclip work.",
@@ -480,7 +485,10 @@ export async function execute(
     context,
   };
 
-  const systemPrompt = renderTemplate(systemPromptTemplate, templateData);
+  const renderedSystemPromptTemplate = renderTemplate(systemPromptTemplate, templateData);
+  const systemPrompt = agentInstructionsBundle
+    ? `${renderedSystemPromptTemplate}\n\n${agentInstructionsBundle}`
+    : renderedSystemPromptTemplate;
   const heartbeatPrompt = renderTemplate(promptTemplate, templateData);
   const wakePrompt = renderPaperclipWakePrompt(
     parseObject(context.paperclipWake),

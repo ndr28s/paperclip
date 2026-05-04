@@ -23,7 +23,11 @@ import { conflict, HttpError, notFound } from "../errors.js";
 import { logger } from "../middleware/logger.js";
 import { publishLiveEvent } from "./live-events.js";
 import { getRunLogStore, type RunLogHandle } from "./run-log-store.js";
-import { getServerAdapter, runningProcesses } from "../adapters/index.js";
+import { findActiveServerAdapter, getServerAdapter, runningProcesses } from "../adapters/index.js";
+import {
+  loadDefaultAgentInstructionsBundle,
+  resolveDefaultAgentInstructionsBundleRole,
+} from "./default-agent-instructions.js";
 import type { AdapterExecutionResult, AdapterInvocationMeta, AdapterSessionCodec, UsageSummary } from "../adapters/index.js";
 import { createLocalAgentJwt } from "../agent-auth-jwt.js";
 import { parseObject, asBoolean, asNumber, appendWithCap, MAX_EXCERPT_BYTES } from "../adapters/utils.js";
@@ -949,6 +953,36 @@ The server will automatically detect and save the proposal. Saved skills are ava
 On Windows hosts, use \`$PAPERCLIP_POST_JSON\` instead of \`curl\` when posting JSON to the Paperclip API (avoids CP949 encoding corruption):
 
   printf '%s' '<json>' | python3 -c "$PAPERCLIP_POST_JSON" /api/path`;
+
+/**
+ * For adapters that don't materialize an instructions bundle on disk
+ * (notably `openai_compatible`), load the role-default onboarding markdown
+ * (AGENTS.md / HEARTBEAT.md / SOUL.md / TOOLS.md) so the runtime can fold
+ * it into the system prompt. Returns null when the adapter has its own
+ * filesystem bundle or the load fails.
+ */
+async function loadAgentInstructionsMarkdownForRun(
+  agentAdapterType: string,
+  agentRole: string,
+): Promise<string | null> {
+  const adapter = findActiveServerAdapter(agentAdapterType);
+  if (adapter?.supportsInstructionsBundle !== false) return null;
+  try {
+    const role = resolveDefaultAgentInstructionsBundleRole(agentRole);
+    const files = await loadDefaultAgentInstructionsBundle(role);
+    const sections = Object.entries(files)
+      .filter(([, content]) => content.trim().length > 0)
+      .map(([fileName, content]) => `# ${fileName}\n\n${content.trim()}`);
+    if (sections.length === 0) return null;
+    return sections.join("\n\n---\n\n");
+  } catch (err) {
+    logger.warn(
+      { err, agentAdapterType, agentRole },
+      "failed to load default agent instructions for run; continuing without bundle",
+    );
+    return null;
+  }
+}
 
 async function searchAgentPastExperience(opts: {
   db: Db;
@@ -3615,9 +3649,16 @@ export function heartbeatService(db: Db) {
       (paperclipWakePayload as Record<string, unknown>).pastExperience = pastExperience;
       context[PAPERCLIP_WAKE_PAYLOAD_KEY] = paperclipWakePayload;
     }
+    const agentInstructionsMarkdown = await loadAgentInstructionsMarkdownForRun(
+      agent.adapterType,
+      agent.role,
+    );
     const runtimeConfig = {
       ...effectiveResolvedConfig,
       paperclipRuntimeSkills: runtimeSkillEntries,
+      ...(agentInstructionsMarkdown
+        ? { paperclipAgentInstructions: agentInstructionsMarkdown }
+        : {}),
       ...(SESSIONED_LOCAL_ADAPTERS.has(agent.adapterType) && { enableAgentMemory }),
       ...(agent.adapterType === "hermes_local"
         ? buildHermesContextOverlay({
