@@ -132,18 +132,29 @@ export function meetingRoutes(db: Db) {
       const sessionId = req.params.sessionId as string;
       assertCompanyAccess(req, companyId);
 
-      if (req.actor.type !== "agent" || !req.actor.agentId) {
-        res.status(403).json({ error: "Agent authentication required" });
-        return;
-      }
-      const agentId = req.actor.agentId;
-      const body = req.body.body as string;
-
       const session = await svc.getSession(sessionId, companyId);
       if (!session) {
         res.status(404).json({ error: "Meeting session not found" });
         return;
       }
+
+      // Hermes (and other adapters that issue API calls without injecting
+      // PAPERCLIP_API_KEY) reach this route under local_trusted as
+      // local_implicit. In that case, fall back to the session's bound
+      // agentId — localhost is already trusted by the deployment mode and
+      // the session itself scopes the write.
+      const agentId =
+        req.actor.type === "agent" && req.actor.agentId
+          ? req.actor.agentId
+          : req.actor.source === "local_implicit" && session.agentId
+            ? session.agentId
+            : null;
+
+      if (!agentId) {
+        res.status(403).json({ error: "Agent authentication required" });
+        return;
+      }
+      const body = req.body.body as string;
 
       const message = await svc.addAgentMessage(sessionId, companyId, agentId, body);
       res.status(201).json(message);
