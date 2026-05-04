@@ -157,6 +157,10 @@ export function useActiveSession(companyId: string | null) {
   return useApiData<RawMeetingSession | null>(companyId ? `/companies/${companyId}/meeting-sessions/active` : null);
 }
 
+export function useActiveSessions(companyId: string | null) {
+  return useApiData<RawMeetingSession[]>(companyId ? `/companies/${companyId}/meeting-sessions/active-all` : null);
+}
+
 export function useMeetingMessages(companyId: string | null, sessionId: string | null) {
   return useApiData<RawMeetingMessage[]>(
     companyId && sessionId ? `/companies/${companyId}/meeting-sessions/${sessionId}/messages` : null,
